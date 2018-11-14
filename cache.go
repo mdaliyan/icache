@@ -11,7 +11,6 @@ import (
 	"strings"
 	"log"
 	"reflect"
-	"fmt"
 )
 
 func md5Key(text string) string {
@@ -124,12 +123,9 @@ func (c *Pot) Get(key string, i interface{}) (err error) {
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return errors.New("need to be a pointer")
 	}
-	fmt.Println("is pointer")
 	k := keyGen(key)
 	c.rw.Lock()
-	fmt.Println("keyGen", k)
 	ent, ok := c.Entries[k]
-	fmt.Println("got ent")
 	c.rw.Unlock()
 
 	if ! ok {

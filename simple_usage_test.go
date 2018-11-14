@@ -1,4 +1,4 @@
-package iCache
+package iCache_test
 
 import (
 	"testing"
@@ -6,6 +6,8 @@ import (
 	"sync"
 	"github.com/allegro/bigcache"
 	"github.com/coocood/freecache"
+	. "github.com/mdaliyan/icache"
+
 	"encoding/json"
 	"time"
 )
