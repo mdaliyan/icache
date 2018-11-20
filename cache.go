@@ -66,11 +66,11 @@ func NewDiskPot(path string) (Cache *Pot, err error) {
 
 func NewPot() (Cache *Pot) {
 	Cache = new(Pot)
-	Cache.Init()
+	Cache.Purge()
 	return
 }
 
-func (c *Pot) Init() {
+func (c *Pot) Purge() {
 	c.Entries = entries{}
 	c.inited = true
 	return
@@ -89,6 +89,14 @@ func (c *Pot) Len() (l float64) {
 	l = float64(len(c.Entries))
 	c.rw.Unlock()
 	return l
+}
+
+func (c *Pot) Drop(key string) {
+	k := keyGen(key)
+	c.rw.Lock()
+	c.Entries[k] = nil
+	delete(c.Entries, k)
+	c.rw.Unlock()
 }
 
 func (c *Pot) Exists(key string) bool {
@@ -132,7 +140,7 @@ func (c *Pot) Get(key string, i interface{}) (err error) {
 		return errors.New("not found")
 	}
 	if ent.Ttl > 0 {
-		if now < ent.ExpiresAt {
+		if now > ent.ExpiresAt {
 			c.rw.Lock()
 			c.Entries[k] = nil
 			delete(c.Entries, k)
