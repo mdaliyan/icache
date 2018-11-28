@@ -71,8 +71,10 @@ func NewPot() (Cache *Pot) {
 }
 
 func (c *Pot) Purge() {
+	c.rw.Lock()
 	c.Entries = entries{}
 	c.inited = true
+	c.rw.Unlock()
 	return
 }
 
