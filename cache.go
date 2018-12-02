@@ -6,18 +6,9 @@ import (
 	"os"
 	"encoding/gob"
 	"time"
-	"crypto/md5"
-	"encoding/hex"
-	"strings"
 	"log"
 	"reflect"
 )
-
-func md5Key(text string) string {
-	hashMaker := md5.New()
-	hashMaker.Write([]byte(strings.ToLower(text)))
-	return hex.EncodeToString(hashMaker.Sum(nil))
-}
 
 type entries map[uint64]*entry
 
