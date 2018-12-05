@@ -1,31 +1,32 @@
 package iCache
 
 import (
-	"errors"
-	"sync"
-	"os"
 	"encoding/gob"
-	"time"
+	"errors"
 	"log"
+	"os"
 	"reflect"
+	"sync"
+	"time"
 )
 
 type entries map[uint64]*entry
+type expiredDates map[uint64]int64
 
 type entry struct {
-	rw        sync.RWMutex
 	Data      reflect.Value
 	ExpiresAt int64
 	Ttl       int64
 }
 
 type Pot struct {
-	rw        sync.RWMutex
-	Entries   entries
-	path      string
-	flushTime int64
-	flushLen  float64
-	inited    bool
+	rw           sync.RWMutex
+	Entries      entries
+	ExpiredDates expiredDates
+	path         string
+	flushTime    int64
+	flushLen     float64
+	inited       bool
 }
 
 var now int64
@@ -33,6 +34,7 @@ var now int64
 func NewDiskPot(path string) (Cache *Pot, err error) {
 	Cache = new(Pot)
 	Cache.Entries = entries{}
+	Cache.ExpiredDates = expiredDates{}
 	Cache.path = path
 	if file, err := os.Open(path); err == nil {
 		decoder := gob.NewDecoder(file)
@@ -57,23 +59,32 @@ func NewDiskPot(path string) (Cache *Pot, err error) {
 
 func NewPot() (Cache *Pot) {
 	Cache = new(Pot)
-	Cache.Purge()
+	Cache.Init()
 	return
+}
+
+func (c *Pot) Init() {
+	c.Purge()
+	go func() {
+		for {
+			c.deleteAllExpired()
+			time.Sleep(time.Second)
+		}
+	}()
 }
 
 func (c *Pot) Purge() {
 	c.rw.Lock()
 	c.Entries = entries{}
+	c.ExpiredDates = expiredDates{}
 	c.inited = true
 	c.rw.Unlock()
-	return
 }
 
 func (c *Pot) panicIfNotInitialized() {
 	if ! c.inited {
 		panic("iCache should be initialized before use")
 	}
-	return
 }
 
 func (c *Pot) Len() (l float64) {
@@ -143,10 +154,12 @@ func (c *Pot) Get(key string, i interface{}) (err error) {
 		// ent.ExpiresAt = time.Now().Unix() + ent.Ttl
 	}
 	v.Elem().Set(ent.Data)
+
 	return nil
 }
 
 func (c *Pot) Set(k string, i interface{}, ttl time.Duration) {
+	ExpiresAt := time.Now().Add(ttl).Unix()
 	var v reflect.Value
 	if reflect.TypeOf(i).Kind() == reflect.Ptr {
 		v = reflect.ValueOf(i).Elem()
@@ -158,7 +171,22 @@ func (c *Pot) Set(k string, i interface{}, ttl time.Duration) {
 		Data:      v,
 		ExpiresAt: time.Now().Add(ttl).Unix(),
 	}
+	if ttl > 0 {
+		c.ExpiredDates[keyGen(k)] = ExpiresAt
+	}
 	c.rw.Unlock()
+}
+
+func (c *Pot) deleteAllExpired() {
+	for k, expiresAt := range c.ExpiredDates {
+		if now > expiresAt {
+			c.rw.Lock()
+			c.Entries[k] = nil
+			delete(c.ExpiredDates, k)
+			delete(c.Entries, k)
+			c.rw.Unlock()
+		}
+	}
 }
 
 func init() {
