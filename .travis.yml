@@ -1,0 +1,21 @@
+sudo: false
+language: go
+
+go:
+  - 1.9.x
+  - 1.10.x
+  - 1.11.x
+  - master
+
+# Skip the install step. Don't `go get` dependencies. Only build with the code
+# in vendor/
+install: true
+
+before_script:
+  - go get github.com/mdaliyan/icache
+  - go get github.com/allegro/bigcache
+  - go get github.com/coocood/freecache
+  - go get github.com/stretchr/testify/assert
+
+script:
+   - go test -v ./...

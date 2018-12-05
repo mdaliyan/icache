@@ -1,14 +1,13 @@
 package iCache_test
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"sync"
+	"encoding/json"
 	"github.com/allegro/bigcache"
 	"github.com/coocood/freecache"
 	. "github.com/mdaliyan/icache"
-
-	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"sync"
+	"testing"
 	"time"
 )
 
@@ -33,6 +32,26 @@ func TestNewCache(t *testing.T) {
 	var u2 User
 	c.Get("user1", &u2)
 	a.Equal("Ali", u2.Name)
+}
+
+func TestAutoExpired(t *testing.T) {
+	a := assert.New(t)
+	c := NewPot()
+	user1 := User{Name: "john", Age: 10}
+	user2 := User{Name: "jack", Age: 15}
+	user3 := User{Name: "mary", Age: 27}
+
+	c.Set(user1.Name, user1, time.Second*2)
+	c.Set(user2.Name, user2, time.Second*2)
+	c.Set(user3.Name, user3, time.Second*7)
+
+	time.Sleep(time.Second * 5)
+	err1 := c.Get(user1.Name, &user1)
+	err2 := c.Get(user2.Name, &user2)
+	err3 := c.Get(user3.Name, &user3)
+	a.EqualError(err1, "not found")
+	a.EqualError(err2, "not found")
+	a.Equal(nil, err3)
 }
 
 func Benchmark_GR_InterfaceCache(b *testing.B) {
@@ -63,7 +82,7 @@ func BenchmarkInterfaceCache(b *testing.B) {
 	}
 }
 
-func Benchmark_GR_Freecache(b *testing.B) {
+func Benchmark_GR_FreeCache(b *testing.B) {
 	c := freecache.NewCache(100 * 100)
 	key := []byte("userID")
 	by, _ := json.Marshal(U)
@@ -83,7 +102,7 @@ func Benchmark_GR_Freecache(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkFreecache(b *testing.B) {
+func BenchmarkFreeCache(b *testing.B) {
 	c := freecache.NewCache(100 * 100)
 	key := []byte("userID")
 	by, _ := json.Marshal(U)
@@ -97,7 +116,7 @@ func BenchmarkFreecache(b *testing.B) {
 	}
 }
 
-func Benchmark_GR_Bigcache(b *testing.B) {
+func Benchmark_GR_BigCache(b *testing.B) {
 	c, _ := bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
 	by, _ := json.Marshal(U)
 	c.Set("userID", by)
@@ -116,7 +135,7 @@ func Benchmark_GR_Bigcache(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkBigcache(b *testing.B) {
+func BenchmarkBigCache(b *testing.B) {
 	c, _ := bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
 	by, _ := json.Marshal(U)
 	c.Set("userID", by)
