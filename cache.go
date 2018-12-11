@@ -178,15 +178,19 @@ func (c *Pot) Set(k string, i interface{}, ttl time.Duration) {
 }
 
 func (c *Pot) deleteAllExpired() {
+	var expired []uint64
 	for k, expiresAt := range c.ExpiredDates {
 		if now > expiresAt {
-			c.rw.Lock()
-			c.Entries[k] = nil
-			delete(c.ExpiredDates, k)
-			delete(c.Entries, k)
-			c.rw.Unlock()
+			expired = append(expired, k)
 		}
 	}
+	c.rw.Lock()
+	for _, k := range expired {
+		c.Entries[k] = nil
+		delete(c.ExpiredDates, k)
+		delete(c.Entries, k)
+	}
+	c.rw.Unlock()
 }
 
 func init() {
