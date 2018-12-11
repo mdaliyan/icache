@@ -33,8 +33,7 @@ var now int64
 
 func NewDiskPot(path string) (Cache *Pot, err error) {
 	Cache = new(Pot)
-	Cache.Entries = entries{}
-	Cache.ExpiredDates = expiredDates{}
+	Cache.Init()
 	Cache.path = path
 	if file, err := os.Open(path); err == nil {
 		decoder := gob.NewDecoder(file)
