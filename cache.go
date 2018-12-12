@@ -100,6 +100,7 @@ func (c *Pot) Len() (l float64) {
 
 func (c *Pot) Drop(key string) {
 	k := keyGen(key)
+
 	c.entriesLock.Lock()
 	c.Entries[k] = nil
 	delete(c.Entries, k)
@@ -108,12 +109,13 @@ func (c *Pot) Drop(key string) {
 
 func (c *Pot) dropByUint64(k uint64) {
 	c.entriesLock.Lock()
+	delete(c.Entries, k)
+	c.entriesLock.Unlock()
+
 	c.expiredDatesLock.Lock()
 	c.Entries[k] = nil
-	delete(c.Entries, k)
 	delete(c.ExpiredDates, k)
 	c.expiredDatesLock.Unlock()
-	c.entriesLock.Unlock()
 }
 
 func (c *Pot) Exists(key string) bool {
@@ -191,18 +193,16 @@ func (c *Pot) Set(k string, i interface{}, ttl time.Duration) {
 
 func (c *Pot) deleteAllExpired() {
 	var expired []uint64
+	c.expiredDatesLock.Lock()
 	for k, expiresAt := range c.ExpiredDates {
 		if now > expiresAt {
 			expired = append(expired, k)
 		}
 	}
-	c.entriesLock.Lock()
+	c.expiredDatesLock.Unlock()
 	for _, k := range expired {
-		c.Entries[k] = nil
-		delete(c.ExpiredDates, k)
-		delete(c.Entries, k)
+		c.dropByUint64(k)
 	}
-	c.entriesLock.Unlock()
 }
 
 func init() {
