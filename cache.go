@@ -109,11 +109,11 @@ func (c *Pot) Drop(key string) {
 
 func (c *Pot) dropByUint64(k uint64) {
 	c.entriesLock.Lock()
+	c.Entries[k] = nil
 	delete(c.Entries, k)
 	c.entriesLock.Unlock()
 
 	c.expiredDatesLock.Lock()
-	c.Entries[k] = nil
 	delete(c.ExpiredDates, k)
 	c.expiredDatesLock.Unlock()
 }
