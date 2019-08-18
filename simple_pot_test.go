@@ -13,50 +13,51 @@ import (
 
 type User struct {
 	Name string
-	Age  int8
+	ID   string
 }
 
 var U = User{
-	Name: "Ali",
-	Age:  8,
+	ID:   "0",
+	Name: "John",
 }
 
 func TestNewCache(t *testing.T) {
 	a := assert.New(t)
-	c := NewPot()
-	c.Set("user1", U, 0)
-	var u User
-	c.Get("user1", &u)
-	u.Name = "jsddjkd"
+	p := NewPot(0)
+	p.Set(U.ID, U)
+	var cachedUser1 User
+	a.NoError(p.Get(U.ID, &cachedUser1), "cachedUser1 should be found")
+	cachedUser1.Name = "Jodie"
 
-	var u2 User
-	c.Get("user1", &u2)
-	a.Equal("Ali", u2.Name)
+	var cachedUser2 User
+	a.NoError(p.Get(U.ID, &cachedUser2), "cachedUser2 should be found")
+	a.Equal("John", cachedUser2.Name)
 }
 
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
-	c := NewPot()
-	user1 := User{Name: "john", Age: 10}
-	user2 := User{Name: "jack", Age: 15}
-	user3 := User{Name: "mary", Age: 27}
+	p := NewPot(time.Second * 2)
+	user1 := User{Name: "john", ID: "1"}
+	user2 := User{Name: "jack", ID: "2"}
 
-	c.Set(user1.Name, user1, time.Second*2)
-	c.Set(user2.Name, user2, time.Second*2)
-	c.Set(user3.Name, user3, time.Second*7)
+	p.Set(user1.ID, user1)
+	time.Sleep(time.Second)
 
-	time.Sleep(time.Second * 5)
-	err1 := c.Get(user1.Name, &user1)
-	err2 := c.Get(user2.Name, &user2)
-	err3 := c.Get(user3.Name, &user3)
-	a.EqualError(err1, "not found")
-	a.EqualError(err2, "not found")
-	a.Equal(nil, err3)
+	var cachedUser User
+	a.NoError(p.Get(user1.ID, &cachedUser), "first user should be found")
+	a.Error(p.Get(user2.ID, &cachedUser), "second user should not be found")
+	p.Set(user2.ID, user2)
+
+	time.Sleep(time.Second)
+
+	a.NoError(p.Get(user2.ID, &cachedUser), "second user should be found")
+	a.Error(p.Get(user1.Name, &user1), "user1 should be expired nowUint")
+
 }
 
 func Benchmark_GR_InterfaceCache(b *testing.B) {
-	c := NewPot()
-	c.Set("userID", U, 0)
+	c := NewPot(time.Minute)
+	c.Set("userID", U)
 	wg := sync.WaitGroup{}
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -72,8 +73,8 @@ func Benchmark_GR_InterfaceCache(b *testing.B) {
 }
 
 func BenchmarkInterfaceCache(b *testing.B) {
-	c := NewPot()
-	c.Set("userID", U, 0)
+	c := NewPot(time.Minute)
+	c.Set("userID", U)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
