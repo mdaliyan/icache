@@ -7,21 +7,15 @@ import (
 	"time"
 )
 
-func NewPot(ttl time.Duration) (Cache *Pot) {
-	Cache = new(Pot)
-	Cache.init(ttl)
-	return
+type valuePot struct {
+	entriesLock    sync.RWMutex
+	entries        map[uint64]*entry
+	timeWindow     []expireTime
+	timeWindowLock sync.RWMutex
+	ttl            time.Duration
 }
 
-type Pot struct {
-	entriesLock      sync.RWMutex
-	entries          map[uint64]*entry
-	expireTimes      []expireTime
-	expiredTimesLock sync.RWMutex
-	ttl              time.Duration
-}
-
-func (c *Pot) init(ttl time.Duration) {
+func (c *valuePot) init(ttl time.Duration) {
 	c.Purge()
 	c.ttl = ttl
 	if ttl > 1 {
@@ -34,43 +28,43 @@ func (c *Pot) init(ttl time.Duration) {
 	}
 }
 
-func (c *Pot) Purge() {
+func (c *valuePot) Purge() {
 	c.entriesLock.Lock()
-	c.expiredTimesLock.Lock()
+	c.timeWindowLock.Lock()
 
 	c.entries = map[uint64]*entry{}
-	c.expireTimes = []expireTime{}
+	c.timeWindow = []expireTime{}
 
-	c.expiredTimesLock.Unlock()
+	c.timeWindowLock.Unlock()
 	c.entriesLock.Unlock()
 }
 
-func (c *Pot) Len() (l float64) {
+func (c *valuePot) Len() (l float64) {
 	c.entriesLock.Lock()
 	l = float64(len(c.entries))
 	c.entriesLock.Unlock()
 	return l
 }
 
-func (c *Pot) Drop(key string) {
+func (c *valuePot) Drop(key string) {
 	c.entriesLock.Lock()
 	c.dropByUint64(keyGen(key))
 	c.entriesLock.Unlock()
 }
 
-func (c *Pot) dropByUint64(k uint64) {
+func (c *valuePot) dropByUint64(k uint64) {
 	c.entries[k] = nil
 	delete(c.entries, k)
 }
 
-func (c *Pot) Exists(key string) bool {
+func (c *valuePot) Exists(key string) bool {
 	c.entriesLock.Lock()
 	_, ok := c.entries[keyGen(key)]
 	c.entriesLock.Unlock()
 	return ok
 }
 
-func (c *Pot) Get(key string, i interface{}) (err error) {
+func (c *valuePot) Get(key string, i interface{}) (err error) {
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return errors.New("need to be a pointer")
@@ -86,7 +80,7 @@ func (c *Pot) Get(key string, i interface{}) (err error) {
 	return nil
 }
 
-func (c *Pot) Set(k string, i interface{}) {
+func (c *valuePot) Set(k string, i interface{}) {
 	var v reflect.Value
 	if reflect.TypeOf(i).Kind() == reflect.Ptr {
 		v = reflect.ValueOf(i).Elem()
@@ -103,28 +97,29 @@ func (c *Pot) Set(k string, i interface{}) {
 	c.entriesLock.Unlock()
 
 	if c.ttl > 0 {
-		c.expiredTimesLock.Lock()
-		c.expireTimes = append(c.expireTimes, expireTime{
+		c.timeWindowLock.Lock()
+		c.timeWindow = append(c.timeWindow, expireTime{
 			Key:       key,
 			ExpiresAt: time.Now().Add(c.ttl).Unix(),
 		})
-		c.expiredTimesLock.Unlock()
+		c.timeWindowLock.Unlock()
 	}
 }
 
-func (c *Pot) dropExpiredEntries() {
+func (c *valuePot) dropExpiredEntries() {
 	var expired []uint64
-	c.expiredTimesLock.Lock()
-	for _, entrie := range c.expireTimes {
+	c.timeWindowLock.Lock()
+	for _, entrie := range c.timeWindow {
 		if now() > entrie.ExpiresAt {
 			expired = append(expired, entrie.Key)
 		} else {
 			break
 		}
 	}
-	c.expireTimes = c.expireTimes[len(expired):]
-	c.expiredTimesLock.Unlock()
+	c.timeWindow = c.timeWindow[len(expired):]
+	c.timeWindowLock.Unlock()
 
+	// fmt.Println("time window:", c.timeWindow, "--->", expired)
 	c.entriesLock.Lock()
 	for _, k := range expired {
 		c.dropByUint64(k)

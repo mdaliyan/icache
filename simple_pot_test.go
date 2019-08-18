@@ -23,7 +23,7 @@ var U = User{
 
 func TestNewCache(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(0)
+	p := NewPot(Config{})
 	p.Set(U.ID, U)
 	var cachedUser1 User
 	a.NoError(p.Get(U.ID, &cachedUser1), "cachedUser1 should be found")
@@ -36,27 +36,31 @@ func TestNewCache(t *testing.T) {
 
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(time.Second * 2)
+	p := NewPot(Config{TTL:time.Second * 2})
 	user1 := User{Name: "john", ID: "1"}
 	user2 := User{Name: "jack", ID: "2"}
+	user3 := User{Name: "jane", ID: "3"}
 
 	p.Set(user1.ID, user1)
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond*1500)
+
+	p.Set(user3.ID, user3)
 
 	var cachedUser User
 	a.NoError(p.Get(user1.ID, &cachedUser), "first user should be found")
 	a.Error(p.Get(user2.ID, &cachedUser), "second user should not be found")
 	p.Set(user2.ID, user2)
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second*2)
 
 	a.NoError(p.Get(user2.ID, &cachedUser), "second user should be found")
 	a.Error(p.Get(user1.Name, &user1), "user1 should be expired nowUint")
 
+	time.Sleep(time.Second*2)
 }
 
 func Benchmark_GR_InterfaceCache(b *testing.B) {
-	c := NewPot(time.Minute)
+	c := NewPot(Config{TTL:time.Minute})
 	c.Set("userID", U)
 	wg := sync.WaitGroup{}
 	b.ReportAllocs()
@@ -73,7 +77,7 @@ func Benchmark_GR_InterfaceCache(b *testing.B) {
 }
 
 func BenchmarkInterfaceCache(b *testing.B) {
-	c := NewPot(time.Minute)
+	c := NewPot(Config{TTL:time.Minute})
 	c.Set("userID", U)
 	b.ReportAllocs()
 	b.ResetTimer()
