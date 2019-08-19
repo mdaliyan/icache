@@ -2,17 +2,16 @@ package iCache
 
 import (
 	"reflect"
-	"sync"
 	"time"
 )
 
 type Pot interface {
 	Purge()
 	Len() (l float64)
-	Drop(key string)
+	Drop(key ...string)
 	Exists(key string) bool
 	Get(key string, i interface{}) (err error)
-	Set(k string, i interface{})
+	Set(k string, i interface{}) (err error)
 }
 
 type Config struct {
@@ -25,34 +24,13 @@ type Type int
 
 const (
 	Value Type = iota
-	Interface
+	Pointer
 )
 
-func NewPot(config Config) (Cache Pot) {
-	pot := new(valuePot)
-	pot.init(config.TTL)
+func NewPot(config Config) Pot {
+	pot := new(pot)
+	pot.init(config)
 	return pot
-}
-
-var nowUint int64
-var nowLock sync.RWMutex
-
-func now() (n int64) {
-	nowLock.Lock()
-	n = nowUint
-	nowLock.Unlock()
-	return
-}
-
-func init() {
-	go func() {
-		for {
-			nowLock.Lock()
-			nowUint = time.Now().Unix()
-			nowLock.Unlock()
-			time.Sleep(time.Second)
-		}
-	}()
 }
 
 type expireTime struct {
@@ -61,5 +39,7 @@ type expireTime struct {
 }
 
 type entry struct {
-	Data reflect.Value
+	Value     reflect.Value
+	Interface interface{}
+	Kind      string
 }

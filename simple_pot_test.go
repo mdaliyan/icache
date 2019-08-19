@@ -21,6 +21,49 @@ var U = User{
 	Name: "John",
 }
 
+// func fillInterfaceByPointer(obj *User, i interface{}) error {
+//
+// 	interfaceType := reflect.TypeOf(i)
+// 	objectType := reflect.TypeOf(obj)
+// 	fmt.Println(objectType.String(), interfaceType.String()[1:])
+//
+// 	if interfaceType.Kind() != reflect.Ptr {
+// 		return errors.New("need to be a pointer")
+// 	}
+// 	if interfaceType.String()[1:] != objectType.String() {
+// 		return errors.New("mismatched types")
+// 	}
+//
+// 	*i = obj
+//
+// 	return nil
+// }
+//
+// func TestPointerFiller(t *testing.T) {
+//
+// 	base := &User{Name: "john", ID: "1"}
+// 	var loadedUser *User
+// 	var notPointerUser User
+// 	var someUnacceptableType string
+//
+// 	assert.Error(t, fillInterfaceByPointer(base, notPointerUser), "interface should be a pointer")
+// 	assert.Error(t, fillInterfaceByPointer(base, someUnacceptableType), "mismatched types should be rejected")
+// 	assert.NoError(t, fillInterfaceByPointer(base, &loadedUser), "not ok")
+//
+// 	base.Name = "jane"
+//
+// 	assert.Equal(t, "jane", loadedUser.Name)
+//
+// }
+
+func TestGetError(t *testing.T) {
+	a := assert.New(t)
+	p := NewPot(Config{})
+	p.Set(U.ID, U)
+	var cachedUser1 string
+	a.Error(p.Get(U.ID, &cachedUser1), "type mismatch error")
+}
+
 func TestNewCache(t *testing.T) {
 	a := assert.New(t)
 	p := NewPot(Config{})
@@ -36,31 +79,32 @@ func TestNewCache(t *testing.T) {
 
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(Config{TTL:time.Second * 2})
+	p := NewPot(Config{Type: Value, TTL: time.Second * 2})
 	user1 := User{Name: "john", ID: "1"}
 	user2 := User{Name: "jack", ID: "2"}
 	user3 := User{Name: "jane", ID: "3"}
 
 	p.Set(user1.ID, user1)
-	time.Sleep(time.Millisecond*1500)
+	time.Sleep(time.Millisecond * 1500)
 
 	p.Set(user3.ID, user3)
 
 	var cachedUser User
+	a.True(p.Exists(user1.ID), "first user should be found")
 	a.NoError(p.Get(user1.ID, &cachedUser), "first user should be found")
 	a.Error(p.Get(user2.ID, &cachedUser), "second user should not be found")
 	p.Set(user2.ID, user2)
 
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second * 2)
 
 	a.NoError(p.Get(user2.ID, &cachedUser), "second user should be found")
 	a.Error(p.Get(user1.Name, &user1), "user1 should be expired nowUint")
 
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second * 2)
 }
 
-func Benchmark_GR_InterfaceCache(b *testing.B) {
-	c := NewPot(Config{TTL:time.Minute})
+func Benchmark_iCache_Goroutines(b *testing.B) {
+	c := NewPot(Config{TTL: time.Minute})
 	c.Set("userID", U)
 	wg := sync.WaitGroup{}
 	b.ReportAllocs()
@@ -76,8 +120,36 @@ func Benchmark_GR_InterfaceCache(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkInterfaceCache(b *testing.B) {
-	c := NewPot(Config{TTL:time.Minute})
+func Benchmark_iCache_Goroutines_MultiShard(b *testing.B) {
+	c := NewPot(Config{TTL: time.Minute, MultiShard: true})
+	c.Set("userID", U)
+	wg := sync.WaitGroup{}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		wg.Add(1)
+		go func() {
+			var ut User
+			c.Get("userID", &ut)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
+func Benchmark_iCache(b *testing.B) {
+	c := NewPot(Config{TTL: time.Minute})
+	c.Set("userID", U)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var ut User
+		c.Get("userID", &ut)
+	}
+}
+
+func Benchmark_iCache_MultiShard(b *testing.B) {
+	c := NewPot(Config{TTL: time.Minute, MultiShard: true})
 	c.Set("userID", U)
 	b.ReportAllocs()
 	b.ResetTimer()
