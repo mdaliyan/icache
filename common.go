@@ -15,17 +15,9 @@ type Pot interface {
 }
 
 type Config struct {
-	Type       Type
 	MultiShard bool
 	TTL        time.Duration
 }
-
-type Type int
-
-const (
-	Value Type = iota
-	Pointer
-)
 
 func NewPot(config Config) Pot {
 	pot := new(pot)

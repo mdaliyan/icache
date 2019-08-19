@@ -20,7 +20,7 @@ var U = User{
 	ID:   "0",
 	Name: "John",
 }
-
+//
 // func fillInterfaceByPointer(obj *User, i interface{}) error {
 //
 // 	interfaceType := reflect.TypeOf(i)
@@ -30,11 +30,15 @@ var U = User{
 // 	if interfaceType.Kind() != reflect.Ptr {
 // 		return errors.New("need to be a pointer")
 // 	}
-// 	if interfaceType.String()[1:] != objectType.String() {
+// 	if objectType.String() != interfaceType.String()[1:] {
 // 		return errors.New("mismatched types")
 // 	}
 //
-// 	*i = obj
+// 	v := reflect.ValueOf(i)
+// 	v.SetPointer(unsafe.Pointer(obj))
+//
+// 	fmt.Println()
+// 	spew.Dump("inside:" ,i)
 //
 // 	return nil
 // }
@@ -49,6 +53,10 @@ var U = User{
 // 	assert.Error(t, fillInterfaceByPointer(base, notPointerUser), "interface should be a pointer")
 // 	assert.Error(t, fillInterfaceByPointer(base, someUnacceptableType), "mismatched types should be rejected")
 // 	assert.NoError(t, fillInterfaceByPointer(base, &loadedUser), "not ok")
+//
+// 	fmt.Println()
+// 	spew.Dump("returned:", loadedUser)
+// 	fmt.Println()
 //
 // 	base.Name = "jane"
 //
@@ -79,7 +87,7 @@ func TestNewCache(t *testing.T) {
 
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(Config{Type: Value, TTL: time.Second * 2})
+	p := NewPot(Config{TTL: time.Second * 2})
 	user1 := User{Name: "john", ID: "1"}
 	user2 := User{Name: "jack", ID: "2"}
 	user3 := User{Name: "jane", ID: "3"}
@@ -90,15 +98,18 @@ func TestAutoExpired(t *testing.T) {
 	p.Set(user3.ID, user3)
 
 	var cachedUser User
-	a.True(p.Exists(user1.ID), "first user should be found")
-	a.NoError(p.Get(user1.ID, &cachedUser), "first user should be found")
-	a.Error(p.Get(user2.ID, &cachedUser), "second user should not be found")
+	a.True(p.Exists(user1.ID), "user1 should be found")
+	a.NoError(p.Get(user1.ID, &cachedUser), "user1 should be found")
+	a.False(p.Exists(user2.ID), "user2 should not be found")
+	a.Error(p.Get(user2.ID, &cachedUser), "user2 should not be found")
 	p.Set(user2.ID, user2)
 
 	time.Sleep(time.Second * 2)
 
-	a.NoError(p.Get(user2.ID, &cachedUser), "second user should be found")
+	a.True(p.Exists(user2.ID), "user2 should be found")
+	a.NoError(p.Get(user2.ID, &cachedUser), "user2 should be found")
 	a.Error(p.Get(user1.Name, &user1), "user1 should be expired nowUint")
+	a.False(p.Exists(user1.ID), "user1 should be expired after 2 seconds")
 
 	time.Sleep(time.Second * 2)
 }

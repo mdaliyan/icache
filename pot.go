@@ -14,13 +14,11 @@ type pot struct {
 	timeWindow     []expireTime
 	timeWindowLock sync.RWMutex
 	ttl            time.Duration
-	typ            Type
 	multiShard     bool
 }
 
 func (p *pot) init(config Config) {
 	p.ttl = config.TTL
-	p.typ = config.Type
 	p.multiShard = config.MultiShard
 	p.Purge()
 	if p.ttl > 1 {
@@ -121,17 +119,14 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 		return errors.New("not found")
 	}
 
-	switch p.typ {
-	case Value:
-		v := reflect.ValueOf(i)
-		if v.Kind() != reflect.Ptr || v.IsNil() {
-			return errors.New("need to be a pointer")
-		}
-		if ent.Kind != v.String()[2:] {
-			return errors.New("requested entry type does not match: \"" + ent.Kind + "!=" + v.String()[2:] + "\"")
-		}
-		v.Elem().Set(ent.Value)
+	v := reflect.ValueOf(i)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return errors.New("need to be a pointer")
 	}
+	if ent.Kind != v.String()[2:] {
+		return errors.New("requested entry type does not match: \"" + ent.Kind + "!=" + v.String()[2:] + "\"")
+	}
+	v.Elem().Set(ent.Value)
 
 	return nil
 }
@@ -140,23 +135,14 @@ func (p *pot) Set(k string, i interface{}) (err error) {
 	var entry = &entry{}
 	key := keyGen(k)
 
-	typ := reflect.TypeOf(i)
-
-	switch p.typ {
-	case Value:
-		var v reflect.Value
-		if typ.Kind() == reflect.Ptr {
-			v = reflect.ValueOf(i).Elem()
-		} else {
-			v = reflect.ValueOf(i)
-		}
-		entry.Value = v
-		entry.Kind = v.String()[1:]
-	case Pointer:
-		if typ.Kind() != reflect.Ptr {
-			return errors.New("need to be a pointer")
-		}
+	var v reflect.Value
+	if reflect.TypeOf(i).Kind() == reflect.Ptr {
+		v = reflect.ValueOf(i).Elem()
+	} else {
+		v = reflect.ValueOf(i)
 	}
+	entry.Value = v
+	entry.Kind = v.String()[1:]
 
 	p.setEntry(key, entry)
 
