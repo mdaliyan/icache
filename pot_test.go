@@ -20,49 +20,6 @@ var U = User{
 	ID:   "0",
 	Name: "John",
 }
-//
-// func fillInterfaceByPointer(obj *User, i interface{}) error {
-//
-// 	interfaceType := reflect.TypeOf(i)
-// 	objectType := reflect.TypeOf(obj)
-// 	fmt.Println(objectType.String(), interfaceType.String()[1:])
-//
-// 	if interfaceType.Kind() != reflect.Ptr {
-// 		return errors.New("need to be a pointer")
-// 	}
-// 	if objectType.String() != interfaceType.String()[1:] {
-// 		return errors.New("mismatched types")
-// 	}
-//
-// 	v := reflect.ValueOf(i)
-// 	v.SetPointer(unsafe.Pointer(obj))
-//
-// 	fmt.Println()
-// 	spew.Dump("inside:" ,i)
-//
-// 	return nil
-// }
-//
-// func TestPointerFiller(t *testing.T) {
-//
-// 	base := &User{Name: "john", ID: "1"}
-// 	var loadedUser *User
-// 	var notPointerUser User
-// 	var someUnacceptableType string
-//
-// 	assert.Error(t, fillInterfaceByPointer(base, notPointerUser), "interface should be a pointer")
-// 	assert.Error(t, fillInterfaceByPointer(base, someUnacceptableType), "mismatched types should be rejected")
-// 	assert.NoError(t, fillInterfaceByPointer(base, &loadedUser), "not ok")
-//
-// 	fmt.Println()
-// 	spew.Dump("returned:", loadedUser)
-// 	fmt.Println()
-//
-// 	base.Name = "jane"
-//
-// 	assert.Equal(t, "jane", loadedUser.Name)
-//
-// }
 
 func TestGetError(t *testing.T) {
 	a := assert.New(t)
