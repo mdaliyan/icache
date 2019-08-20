@@ -7,26 +7,22 @@ import (
 
 type Pot interface {
 	Purge()
-	Len() (l float64)
+	Len() (l int)
 	Drop(key ...string)
 	Exists(key string) bool
 	Get(key string, i interface{}) (err error)
 	Set(k string, i interface{}) (err error)
 }
 
-type Config struct {
-	MultiShard bool
-	TTL        time.Duration
-}
-
-func NewPot(config Config) Pot {
+func NewPot(TTL time.Duration) Pot {
 	pot := new(pot)
-	pot.init(config)
+	pot.init(TTL)
 	return pot
 }
 
 type expireTime struct {
 	Key       uint64
+	Shard       uint64
 	ExpiresAt int64
 }
 
