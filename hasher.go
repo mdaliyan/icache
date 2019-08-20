@@ -18,6 +18,7 @@ func keyGen(key string) (hashVal, segID uint64) {
 	}
 	return hash, hashVal & shardAndOpVal
 }
+
 //
 //func KeyShard(data []byte) (hashVal, segID uint64) {
 //	hashVal = xxhash.Sum64(data)

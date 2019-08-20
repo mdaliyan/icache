@@ -21,13 +21,12 @@ func NewPot(TTL time.Duration) Pot {
 }
 
 type expireTime struct {
-	Key       uint64
-	Shard       uint64
-	ExpiresAt int64
+	key       uint64
+	shard     uint64
+	expiresAt int64
 }
 
 type entry struct {
-	Value     reflect.Value
-	Interface interface{}
-	Kind      string
+	value reflect.Value
+	kind  string
 }

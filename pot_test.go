@@ -2,14 +2,15 @@ package iCache_test
 
 import (
 	"encoding/json"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/allegro/bigcache"
 	"github.com/coocood/freecache"
 	. "github.com/mdaliyan/icache"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
-	"os"
-	"math/rand"
 )
 
 type User struct {
@@ -102,7 +103,7 @@ func TestMain(m *testing.M) {
 	icache = NewPot(time.Hour)
 	bigCache, _ = bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
 	freeCache = freecache.NewCache(100 * 100)
-	for i := 0; i < 4800; i++ {
+	for i := 0; i < 10000; i++ {
 		id := randomString()
 		ids = append(ids, id)
 		U.ID = id
@@ -112,9 +113,6 @@ func TestMain(m *testing.M) {
 		freeCache.Set([]byte(id), Ujson, int(time.Hour.Seconds()))
 		bigCache.Set(id, Ujson)
 	}
-	//for i := 0; i < 200; i++ {
-	//	ids = append(ids, randomString())
-	//}
 	idsLen = len(ids) - 1
 	os.Exit(m.Run())
 }
@@ -129,42 +127,12 @@ var icache Pot
 var freeCache *freecache.Cache
 var bigCache *bigcache.BigCache
 
-func Benchmark_iCache_Concurrent(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			var ut User
-			icache.Get(randomID(), &ut)
-		}
-	})
-}
-
 func Benchmark_iCache(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		var ut User
-		icache.Get(randomID(), &ut)
+		getFromICache()
 	}
-}
-
-func getFromFreeCache() {
-	var ut User
-	byt, err := freeCache.Get([]byte(randomID()))
-	if err != nil {
-		json.Unmarshal(byt, &ut)
-	}
-}
-
-func Benchmark_FreeCache_Concurrent(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			getFromFreeCache()
-		}
-	})
 }
 
 func Benchmark_FreeCache(b *testing.B) {
@@ -175,15 +143,59 @@ func Benchmark_FreeCache(b *testing.B) {
 	}
 }
 
-func getFromBigCache() {
+func Benchmark_BigCache(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		getFromBigCache()
+	}
+}
+
+func getFromICache() {
 	var ut User
-	byt, err := bigCache.Get(randomID())
-	if err != nil {
+	icache.Get(randomID(), &ut)
+}
+
+func getFromFreeCache() {
+	var ut User
+	byt, err := freeCache.Get([]byte(randomID()))
+	if err == nil {
 		json.Unmarshal(byt, &ut)
 	}
 }
 
+func getFromBigCache() {
+	var ut User
+	byt, err := bigCache.Get(randomID())
+	if err == nil {
+		json.Unmarshal(byt, &ut)
+	}
+}
+
+func Benchmark_iCache_Concurrent(b *testing.B) {
+	b.SetParallelism(100)
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			getFromICache()
+		}
+	})
+}
+
+func Benchmark_FreeCache_Concurrent(b *testing.B) {
+	b.SetParallelism(100)
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			getFromFreeCache()
+		}
+	})
+}
+
 func Benchmark_BigCache_Concurrent(b *testing.B) {
+	b.SetParallelism(100)
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -191,12 +203,4 @@ func Benchmark_BigCache_Concurrent(b *testing.B) {
 			getFromBigCache()
 		}
 	})
-}
-
-func Benchmark_BigCache(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		getFromBigCache()
-	}
 }

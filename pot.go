@@ -57,7 +57,7 @@ func (p *pot) Exists(key string) (ok bool) {
 func (p *pot) Get(key string, i interface{}) (err error) {
 	k, shard := keyGen(key)
 	ent, ok := p.shards.GetShard(shard).GetEntry(k)
-	if ! ok {
+	if !ok {
 		return errors.New("not found")
 	}
 
@@ -65,10 +65,10 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return errors.New("need to be a pointer")
 	}
-	if ent.Kind != v.String()[2:] {
-		return errors.New("requested entry type does not match: \"" + ent.Kind + "!=" + v.String()[2:] + "\"")
+	if ent.kind != v.String()[2:] {
+		return errors.New("requested entry type does not match: \"" + ent.kind + "!=" + v.String()[2:] + "\"")
 	}
-	v.Elem().Set(ent.Value)
+	v.Elem().Set(ent.value)
 
 	return nil
 }
@@ -83,17 +83,17 @@ func (p *pot) Set(key string, i interface{}) (err error) {
 	} else {
 		v = reflect.ValueOf(i)
 	}
-	entry.Value = v
-	entry.Kind = v.String()[1:]
+	entry.value = v
+	entry.kind = v.String()[1:]
 
 	p.shards.GetShard(shard).SetEntry(k, entry)
 
 	if p.ttl > 0 {
 		p.timeWindowLock.Lock()
 		p.timeWindow = append(p.timeWindow, expireTime{
-			Key:       k,
-			Shard:     shard,
-			ExpiresAt: time.Now().Add(p.ttl).Unix(),
+			key:       k,
+			shard:     shard,
+			expiresAt: time.Now().Add(p.ttl).UnixNano(),
 		})
 		p.timeWindowLock.Unlock()
 	}
@@ -103,9 +103,9 @@ func (p *pot) Set(key string, i interface{}) (err error) {
 func (p *pot) dropExpiredEntries() {
 	var expired []expireTime
 	p.timeWindowLock.Lock()
-	now := time.Now().Unix()
+	now := time.Now().UnixNano()
 	for _, entry := range p.timeWindow {
-		if now > entry.ExpiresAt {
+		if now > entry.expiresAt {
 			expired = append(expired, entry)
 		} else {
 			break
@@ -117,7 +117,7 @@ func (p *pot) dropExpiredEntries() {
 	// fmt.Println(p.entries)
 	// fmt.Println("time window:", p.timeWindow, "--->", expired)
 	for _, entry := range expired {
-		p.shards.GetShard(entry.Shard).DropEntries(entry.Key)
+		p.shards.GetShard(entry.shard).DropEntries(entry.key)
 	}
 
 }
