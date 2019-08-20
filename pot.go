@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 	"time"
+	"fmt"
 )
 
 type pot struct {
@@ -66,7 +67,8 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 		return errors.New("need to be a pointer")
 	}
 	if ent.kind != v.String()[2:] {
-		return errors.New("requested entry type does not match: \"" + ent.kind + "!=" + v.String()[2:] + "\"")
+		vKind := v.String()[2:]
+		return errors.New(fmt.Sprintf(`requested entry type does not match: " %s != %s "`, ent.kind[:len(ent.kind)-7], vKind[:len(vKind)-7]))
 	}
 	v.Elem().Set(ent.value)
 

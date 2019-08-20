@@ -16,7 +16,7 @@ func keyGen(key string) (hashVal, segID uint64) {
 		hash ^= uint64(key[i])
 		hash *= prime64
 	}
-	return hash, hashVal & shardAndOpVal
+	return hash, hash & shardAndOpVal
 }
 
 //

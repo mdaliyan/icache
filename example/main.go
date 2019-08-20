@@ -1,29 +1,3 @@
-# icache
-
-[![Build Status](https://travis-ci.org/mdaliyan/icache.svg?branch=master)](https://travis-ci.org/mdaliyan/icache)
-
-A cache library for Go with zero GC overhead and high concurrent performance.
-
-go-cache is an in-memory key:value store/cache similar to memcached that
-is suitable for applications running on a single process. Its major
-advantage is that you don't need to marshal or unmarshal your data or do
-type assertion as it doesn't serialize your data and stores values of
-your variables so they are thread-safe and you won't face data-race
-problem.
-
-Any object can be stored, for a given duration or forever, and the cache
-can be safely used by multiple goroutines.
-
-# Installation
-
-```bash
-go get github.com/mdaliyan/icache
-```
-
-# Usage
-
-```go
-
 package main
 
 import (
@@ -78,5 +52,3 @@ func main() {
 	fmt.Println(err, u3)
 
 }
-
-```
