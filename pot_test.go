@@ -38,9 +38,28 @@ var U = User{
 func TestGetError(t *testing.T) {
 	a := assert.New(t)
 	p := NewPot(0)
-	p.Set(U.ID, U)
+	p.Set("1", U)
 	var cachedUser1 string
-	a.Error(p.Get(U.ID, &cachedUser1), "type mismatch error")
+	a.Error(p.Get("1", &cachedUser1), "type mismatch error")
+
+	p.Set("2", &U)
+	a.Error(p.Get("2", cachedUser1), "needs to pass a pointer")
+	a.Error(p.Get("2", nil), "needs to pass a pointer")
+
+}
+
+func TestDrop(t *testing.T) {
+	a := assert.New(t)
+	p := NewPot(0)
+	p.Set("1", U)
+	a.Equal(1, p.Len())
+	p.Set("2", U)
+	p.Set("3", U)
+	a.Equal(3, p.Len())
+	p.Drop("1")
+	a.Equal(2, p.Len())
+	p.Purge()
+	a.Equal(0, p.Len())
 }
 
 func TestNewCache(t *testing.T) {
