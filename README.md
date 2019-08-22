@@ -26,23 +26,22 @@ go get github.com/mdaliyan/icache
 # Usage
 
 ```go
-
 package main
 
 import (
+	"fmt"
 	"github.com/mdaliyan/icache"
 	"time"
-	"fmt"
 )
 
-type User struct {
+type user struct {
 	ID      string
 	Name    string
 	Age     int
-	Contact Contact
+	Contact contact
 }
 
-type Contact struct {
+type contact struct {
 	Phone   string
 	Address string
 }
@@ -53,24 +52,24 @@ func main() {
 
 	// make na new Pot with the default expiration time of 1 Hour
 	// set expiretion time to 0 to disable expiration totally
-	var pot = iCache.NewPot(time.Hour)
+	var pot = icache.NewPot(time.Hour)
 
-	var U = User{
+	var U = user{
 		ID:   "foo",
 		Name: "John Doe",
 		Age:  30,
-		Contact: Contact{
+		Contact: contact{
 			Phone:   "+11111111",
 			Address: "localhost",
 		},
 	}
 
-	// Set the value of the key "foo" to "John Doe" User{}
+	// Set the value of the key "foo" to "John Doe" user{}
 	pot.Set("foo", U)
 
-	// to get the User{} with "foo" key back you need to pass a pointer
-	// to User{}
-	var u2 User
+	// to get the user{} with "foo" key back you need to pass a pointer
+	// to user{}
+	var u2 user
 	err = pot.Get("foo", &u2)
 	fmt.Println(err, u2)
 
@@ -81,5 +80,4 @@ func main() {
 	fmt.Println(err, u3)
 
 }
-
 ```

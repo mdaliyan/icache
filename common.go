@@ -1,10 +1,11 @@
-package iCache
+package icache
 
 import (
 	"reflect"
 	"time"
 )
 
+// Pot holds your cached data
 type Pot interface {
 	Purge()
 	Len() (l int)
@@ -14,6 +15,7 @@ type Pot interface {
 	Set(k string, i interface{}) (err error)
 }
 
+// Creates new Pot with a given ttl duration
 func NewPot(TTL time.Duration) Pot {
 	pot := new(pot)
 	pot.init(TTL)

@@ -1,4 +1,4 @@
-package iCache_test
+package icache_test
 
 import (
 	"encoding/json"

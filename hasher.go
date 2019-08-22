@@ -1,4 +1,4 @@
-package iCache
+package icache
 
 const (
 	// offset64 FNVa offset basis. See https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function#FNV-1a_hash
