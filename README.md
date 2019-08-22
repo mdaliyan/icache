@@ -7,11 +7,9 @@
 [![godoc](https://godoc.org/github.com/mdaliyan/icache.svg?status.svg)](https://godoc.org/github.com/mdaliyan/icache)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
-
-A cache library for Go with zero GC overhead and high concurrent performance.
-
-go-cache is an in-memory key:value store/cache similar to memcached that
-is suitable for applications running on a single process. Its major
+icache is a cache library for Go with high concurrent access performance. 
+it is an in-memory key:value store/cache similar to memcached that
+is suitable for applications running on a single machine. Its major
 advantage is that you don't need to marshal or unmarshal your data or do
 type assertion as it doesn't serialize your data and stores values of
 your variables so they are thread-safe and you won't face data-race
