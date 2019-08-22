@@ -13,23 +13,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type User struct {
+type user struct {
 	ID      string
 	Name    string
 	Age     int
-	Contact Contact
+	Contact contact
 }
 
-type Contact struct {
+type contact struct {
 	Phone   string
 	Address string
 }
 
-var U = User{
+var U = user{
 	ID:   "0",
 	Name: "John",
 	Age:  30,
-	Contact: Contact{
+	Contact: contact{
 		Phone:   "+11111111",
 		Address: "localhost",
 	},
@@ -66,11 +66,11 @@ func TestNewCache(t *testing.T) {
 	a := assert.New(t)
 	p := NewPot(0)
 	p.Set(U.ID, U)
-	var cachedUser1 User
+	var cachedUser1 user
 	a.NoError(p.Get(U.ID, &cachedUser1), "cachedUser1 should be found")
 	cachedUser1.Name = "Jodie"
 
-	var cachedUser2 User
+	var cachedUser2 user
 	a.NoError(p.Get(U.ID, &cachedUser2), "cachedUser2 should be found")
 	a.Equal("John", cachedUser2.Name)
 }
@@ -78,16 +78,16 @@ func TestNewCache(t *testing.T) {
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
 	p := NewPot(time.Second * 2)
-	user1 := User{Name: "john", ID: "1"}
-	user2 := User{Name: "jack", ID: "2"}
-	user3 := User{Name: "jane", ID: "3"}
+	user1 := user{Name: "john", ID: "1"}
+	user2 := user{Name: "jack", ID: "2"}
+	user3 := user{Name: "jane", ID: "3"}
 
 	p.Set(user1.ID, user1)
 	time.Sleep(time.Millisecond * 1500)
 
 	p.Set(user3.ID, user3)
 
-	var cachedUser User
+	var cachedUser user
 	a.True(p.Exists(user1.ID), "user1 should be found")
 	a.NoError(p.Get(user1.ID, &cachedUser), "user1 should be found")
 	a.False(p.Exists(user2.ID), "user2 should not be found")
@@ -171,12 +171,12 @@ func Benchmark_BigCache(b *testing.B) {
 }
 
 func getFromICache() {
-	var ut User
+	var ut user
 	icache.Get(randomID(), &ut)
 }
 
 func getFromFreeCache() {
-	var ut User
+	var ut user
 	byt, err := freeCache.Get([]byte(randomID()))
 	if err == nil {
 		json.Unmarshal(byt, &ut)
@@ -184,7 +184,7 @@ func getFromFreeCache() {
 }
 
 func getFromBigCache() {
-	var ut User
+	var ut user
 	byt, err := bigCache.Get(randomID())
 	if err == nil {
 		json.Unmarshal(byt, &ut)
