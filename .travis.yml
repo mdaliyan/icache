@@ -13,7 +13,7 @@ install: true
 
 before_script:
   - go get golang.org/x/tools/cmd/cover
-    go get github.com/mattn/goveralls
+  - go get github.com/mattn/goveralls
   - go get github.com/mdaliyan/icache
   - go get github.com/allegro/bigcache
   - go get github.com/coocood/freecache
