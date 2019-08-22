@@ -7,6 +7,7 @@ const (
 	prime64 = 1099511628211
 
 	shardAndOpVal = 255
+	shardsCount   = 256
 )
 
 // Sum64 gets the string and returns its uint64 hash value.

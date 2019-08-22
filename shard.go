@@ -2,21 +2,29 @@ package icache
 
 import "sync"
 
-type shards [256]*shard
+type shards [shardsCount]*shard
 
-func (c *shards) GetShard(key uint64) (shard *shard) {
-	return c[key]
+func (s *shards) Purge() {
+	for i := 0; i < shardsCount; i++ {
+		s[i] = &shard{
+			entries: entries{},
+		}
+	}
 }
 
-func (c shards) EntriesLen() (l int) {
-	for _, shard := range c {
+func (s *shards) GetShard(key uint64) (shard *shard) {
+	return s[key]
+}
+
+func (s shards) EntriesLen() (l int) {
+	for _, shard := range s {
 		l += shard.Len()
 	}
 	return
 }
 
 type shard struct {
-	entries     map[uint64]*entry
+	entries     entries
 	entriesLock sync.RWMutex
 }
 

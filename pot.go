@@ -30,12 +30,8 @@ func (p *pot) init(TTL time.Duration) {
 
 func (p *pot) Purge() {
 	p.timeWindowLock.Lock()
-	p.timeWindow = []expireTime{}
-	for i := 0; i < 256; i++ {
-		p.shards[i] = &shard{
-			entries: map[uint64]*entry{},
-		}
-	}
+	p.timeWindow = nil
+	p.shards.Purge()
 	p.timeWindowLock.Unlock()
 }
 

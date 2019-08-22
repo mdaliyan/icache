@@ -15,7 +15,7 @@ type Pot interface {
 	Set(k string, i interface{}) (err error)
 }
 
-// Creates new Pot with a given ttl duration
+// NewPot creates new Pot with a given ttl duration
 func NewPot(TTL time.Duration) Pot {
 	pot := new(pot)
 	pot.init(TTL)
@@ -27,6 +27,8 @@ type expireTime struct {
 	shard     uint64
 	expiresAt int64
 }
+
+type entries map[uint64]*entry
 
 type entry struct {
 	value reflect.Value
