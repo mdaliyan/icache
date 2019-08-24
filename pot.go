@@ -51,6 +51,16 @@ func (p *pot) Exists(key string) (ok bool) {
 	return p.shards.GetShard(shard).EntryExists(k)
 }
 
+func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
+	k, shardID := keyGen(key)
+	ent, ok := p.shards.GetShard(shardID).GetEntry(k)
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	ti := time.Unix(ent.expiresAt, 0)
+	return &ti, nil
+}
+
 func (p *pot) Get(key string, i interface{}) (err error) {
 	k, shard := keyGen(key)
 	ent, ok := p.shards.GetShard(shard).GetEntry(k)
@@ -84,17 +94,19 @@ func (p *pot) Set(key string, i interface{}) (err error) {
 	entry.value = v
 	entry.kind = v.String()[1:]
 
-	p.shards.GetShard(shard).SetEntry(k, entry)
-
 	if p.ttl > 0 {
 		p.timeWindowLock.Lock()
+		entry.expiresAt = time.Now().Add(p.ttl).UnixNano()
 		p.timeWindow = append(p.timeWindow, expireTime{
 			key:       k,
 			shard:     shard,
-			expiresAt: time.Now().Add(p.ttl).UnixNano(),
+			expiresAt: entry.expiresAt,
 		})
 		p.timeWindowLock.Unlock()
 	}
+
+	p.shards.GetShard(shard).SetEntry(k, entry)
+
 	return
 }
 
@@ -102,14 +114,19 @@ func (p *pot) dropExpiredEntries() {
 	var expired []expireTime
 	p.timeWindowLock.Lock()
 	now := time.Now().UnixNano()
-	for _, entry := range p.timeWindow {
-		if now > entry.expiresAt {
-			expired = append(expired, entry)
+	var expiredWindows int
+	for _, timeWindow := range p.timeWindow {
+		if now > timeWindow.expiresAt {
+			expiredWindows++
+			ent, ok := p.shards.GetShard(timeWindow.shard).GetEntry(timeWindow.key)
+			if ok && timeWindow.expiresAt == ent.expiresAt {
+				expired = append(expired, timeWindow)
+			}
 		} else {
 			break
 		}
 	}
-	p.timeWindow = p.timeWindow[len(expired):]
+	p.timeWindow = p.timeWindow[expiredWindows:]
 	p.timeWindowLock.Unlock()
 
 	// fmt.Println(p.entries)

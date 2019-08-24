@@ -11,8 +11,9 @@ type Pot interface {
 	Len() (l int)
 	Drop(key ...string)
 	Exists(key string) bool
-	Get(key string, i interface{}) (err error)
 	Set(k string, i interface{}) (err error)
+	Get(key string, i interface{}) (err error)
+	ExpireTime(key string) (t *time.Time, err error)
 }
 
 // NewPot creates new Pot with a given ttl duration
@@ -31,6 +32,7 @@ type expireTime struct {
 type entries map[uint64]*entry
 
 type entry struct {
-	value reflect.Value
-	kind  string
+	value      reflect.Value
+	expiresAt int64
+	kind       string
 }

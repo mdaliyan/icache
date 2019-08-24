@@ -35,6 +35,25 @@ var U = user{
 	},
 }
 
+func TestUpdateExpireTime(t *testing.T) {
+	a := assert.New(t)
+	p := NewPot(time.Minute)
+	p.Set("1", U)
+	expiresAt, err := p.ExpireTime("1")
+	a.NoError(err, "entry should have expiration time")
+	time.Sleep(time.Microsecond * 50)
+
+	nilExpiresAt, err := p.ExpireTime("2")
+	a.Error(err, "entry should have no expiration time")
+	a.Nil(nilExpiresAt, "expiration time of missing entry should be nil")
+
+	p.Set("1", U)
+	newExpiresAt, err := p.ExpireTime("1")
+	a.NoError(err, "entry should have expiration time")
+	a.NotEqual(expiresAt, newExpiresAt, "expiration should be changed")
+
+}
+
 func TestGetError(t *testing.T) {
 	a := assert.New(t)
 	p := NewPot(0)
@@ -82,6 +101,8 @@ func TestAutoExpired(t *testing.T) {
 	user2 := user{Name: "jack", ID: "2"}
 	user3 := user{Name: "jane", ID: "3"}
 
+	p.Set(user1.ID, user1)
+	time.Sleep(time.Millisecond * 50)
 	p.Set(user1.ID, user1)
 	time.Sleep(time.Millisecond * 1500)
 

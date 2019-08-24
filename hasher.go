@@ -11,7 +11,7 @@ const (
 )
 
 // Sum64 gets the string and returns its uint64 hash value.
-func keyGen(key string) (hashVal, segID uint64) {
+func keyGen(key string) (hashVal, shardID uint64) {
 	var hash uint64 = offset64
 	for i := 0; i < len(key); i++ {
 		hash ^= uint64(key[i])
