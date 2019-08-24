@@ -9,10 +9,10 @@ import (
 )
 
 type pot struct {
-	shards         shards
-	timeWindow     []expireTime
-	timeWindowLock sync.RWMutex
-	ttl            time.Duration
+	shards   shards
+	window   []expireTime
+	windowRW sync.RWMutex
+	ttl      time.Duration
 }
 
 func (p *pot) init(TTL time.Duration) {
@@ -29,10 +29,10 @@ func (p *pot) init(TTL time.Duration) {
 }
 
 func (p *pot) Purge() {
-	p.timeWindowLock.Lock()
-	p.timeWindow = nil
+	p.windowRW.Lock()
+	p.window = nil
 	p.shards.Purge()
-	p.timeWindowLock.Unlock()
+	p.windowRW.Unlock()
 }
 
 func (p *pot) Len() int {
@@ -95,14 +95,14 @@ func (p *pot) Set(key string, i interface{}) (err error) {
 	entry.kind = v.String()[1:]
 
 	if p.ttl > 0 {
-		p.timeWindowLock.Lock()
+		p.windowRW.Lock()
 		entry.expiresAt = time.Now().Add(p.ttl).UnixNano()
-		p.timeWindow = append(p.timeWindow, expireTime{
+		p.window = append(p.window, expireTime{
 			key:       k,
 			shard:     shard,
 			expiresAt: entry.expiresAt,
 		})
-		p.timeWindowLock.Unlock()
+		p.windowRW.Unlock()
 	}
 
 	p.shards.GetShard(shard).SetEntry(k, entry)
@@ -112,10 +112,10 @@ func (p *pot) Set(key string, i interface{}) (err error) {
 
 func (p *pot) dropExpiredEntries() {
 	var expired []expireTime
-	p.timeWindowLock.Lock()
+	p.windowRW.Lock()
 	now := time.Now().UnixNano()
 	var expiredWindows int
-	for _, timeWindow := range p.timeWindow {
+	for _, timeWindow := range p.window {
 		if now > timeWindow.expiresAt {
 			expiredWindows++
 			ent, ok := p.shards.GetShard(timeWindow.shard).GetEntry(timeWindow.key)
@@ -126,11 +126,11 @@ func (p *pot) dropExpiredEntries() {
 			break
 		}
 	}
-	p.timeWindow = p.timeWindow[expiredWindows:]
-	p.timeWindowLock.Unlock()
+	p.window = p.window[expiredWindows:]
+	p.windowRW.Unlock()
 
 	// fmt.Println(p.entries)
-	// fmt.Println("time window:", p.timeWindow, "--->", expired)
+	// fmt.Println("time window:", p.window, "--->", expired)
 	for _, entry := range expired {
 		p.shards.GetShard(entry.shard).DropEntries(entry.key)
 	}

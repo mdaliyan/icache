@@ -24,42 +24,42 @@ func (s shards) EntriesLen() (l int) {
 }
 
 type shard struct {
-	entries     entries
-	entriesLock sync.RWMutex
+	entries entries
+	rw      sync.RWMutex
 }
 
 func (s *shard) Len() (l int) {
-	s.entriesLock.Lock()
+	s.rw.RLock()
 	l = len(s.entries)
-	s.entriesLock.Unlock()
+	s.rw.RUnlock()
 	return
 }
 
 func (s *shard) EntryExists(key uint64) (ok bool) {
-	s.entriesLock.Lock()
+	s.rw.RLock()
 	_, ok = s.entries[key]
-	s.entriesLock.Unlock()
+	s.rw.RUnlock()
 	return
 }
 
 func (s *shard) GetEntry(key uint64) (ent *entry, ok bool) {
-	s.entriesLock.Lock()
+	s.rw.RLock()
 	ent, ok = s.entries[key]
-	s.entriesLock.Unlock()
+	s.rw.RUnlock()
 	return
 }
 
 func (s *shard) SetEntry(key uint64, ent *entry) {
-	s.entriesLock.Lock()
+	s.rw.Lock()
 	s.entries[key] = ent
-	s.entriesLock.Unlock()
+	s.rw.Unlock()
 }
 
 func (s *shard) DropEntries(keys ...uint64) {
-	s.entriesLock.Lock()
+	s.rw.Lock()
 	for _, k := range keys {
 		s.entries[k] = nil
 		delete(s.entries, k)
 	}
-	s.entriesLock.Unlock()
+	s.rw.Unlock()
 }
