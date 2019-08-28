@@ -70,18 +70,18 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return errors.New("need to be a pointer")
+		return errors.New("second parameter needs to be a pointer")
 	}
 	if ent.kind != v.String()[2:] {
 		vKind := v.String()[2:]
-		return fmt.Errorf(`requested entry type does not match: " %s != %s "`, ent.kind[:len(ent.kind)-7], vKind[:len(vKind)-7])
+		return fmt.Errorf(`requested entry type does not match: "%s" != "%s"`, ent.kind[:len(ent.kind)-7], vKind[:len(vKind)-7])
 	}
 	v.Elem().Set(ent.value)
 
 	return nil
 }
 
-func (p *pot) Set(key string, i interface{}) (err error) {
+func (p *pot) Set(key string, i interface{}) {
 	var entry = &entry{}
 	k, shard := keyGen(key)
 

@@ -8,12 +8,10 @@
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
 icache is a cache library for Go with high concurrent access performance. 
-it is an in-memory key:value store/cache similar to memcached that
+it is an in-memory key:value store/cache similar to memcache that
 is suitable for applications running on a single machine. Its major
-advantage is that you don't need to marshal or unmarshal your data or do
-type assertion as it doesn't serialize your data and stores values of
-your variables so they are thread-safe and you won't face data-race
-problem.
+advantage is that it doesn't serialize your data and only stores values of
+your variables so they are thread-safe and you won't face data-race problem.
 
 Any object can be stored, for a given duration or forever, and the cache
 can be safely used by multiple goroutines.
@@ -26,59 +24,30 @@ go get github.com/mdaliyan/icache
 
 # Usage
 
-```go
-package main
+```go 
+// make na new Pot with the default expiration time of 1 Hour
+// set ttl to 0 to disable expiration entirely
+var pot = icache.NewPot(time.Hour) 
 
-import (
-	"fmt"
-	"github.com/mdaliyan/icache"
-	"time"
-)
 
-type user struct {
-	ID      string
-	Name    string
-	Age     int
-	Contact contact
+var U = user{
+    ID:   "foo",
+    Name: "John Doe",
+    Age:  30,
 }
 
-type contact struct {
-	Phone   string
-	Address string
-}
+// set user to "foo" key
+pot.Set("foo", U)
 
-func main() {
 
-	var err error
+// get the user previously set to "foo" key into u2 
+var u2 user
+err = pot.Get("foo", &u2)
 
-	// make na new Pot with the default expiration time of 1 Hour
-	// set expiretion time to 0 to disable expiration totally
-	var pot = icache.NewPot(time.Hour)
 
-	var U = user{
-		ID:   "foo",
-		Name: "John Doe",
-		Age:  30,
-		Contact: contact{
-			Phone:   "+11111111",
-			Address: "localhost",
-		},
-	}
+// if you pass a mismatched type you simply get a "type mismatch" error
+var u3 string
+err = pot.Get("foo", &u3)
 
-	// Set the value of the key "foo" to "John Doe" user{}
-	pot.Set("foo", U)
-
-	// to get the user{} with "foo" key back you need to pass a pointer
-	// to user{}
-	var u2 user
-	err = pot.Get("foo", &u2)
-	fmt.Println(err, u2)
-
-	// if you pass a mismatched type pointer you simply get an error
-	var u3 string
-	err = pot.Get("foo", &u3)
-
-	fmt.Println(err, u3)
-
-}
 ```
+
