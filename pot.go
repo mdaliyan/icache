@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+var NotFoundErr = errors.New("not found")
+var NonPointerErr = errors.New("second parameter needs to be a pointer")
+
 type pot struct {
 	shards   shards
 	window   []expireTime
@@ -55,7 +58,7 @@ func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
 	k, shardID := keyGen(key)
 	ent, ok := p.shards.GetShard(shardID).GetEntry(k)
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, NotFoundErr
 	}
 	ti := time.Unix(ent.expiresAt, 0)
 	return &ti, nil
@@ -65,12 +68,12 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 	k, shard := keyGen(key)
 	ent, ok := p.shards.GetShard(shard).GetEntry(k)
 	if !ok {
-		return errors.New("not found")
+		return NotFoundErr
 	}
 
 	v := reflect.ValueOf(i)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return errors.New("second parameter needs to be a pointer")
+		return NonPointerErr
 	}
 	if ent.kind != v.String()[2:] {
 		vKind := v.String()[2:]
