@@ -2,64 +2,45 @@ package icache
 
 import "sync"
 
-type shards [shardsCount]*shard
+type shards struct {
+	Map sync.Map
+	len uint64
+}
 
 func (s *shards) Purge() {
-	for i := 0; i < shardsCount; i++ {
-		s[i] = &shard{
-			entries: entries{},
-		}
+	s.Map.Range(func(key interface{}, _ interface{}) bool {
+		s.Map.Delete(key)
+		return true
+	})
+}
+
+func (s *shards) Len() (l int) {
+	s.Map.Range(func(_, _ interface{}) bool {
+		l++
+		return true
+	})
+	return
+}
+
+func (s *shards) EntryExists(key string) (ok bool) {
+	_, ok = s.Map.Load(key)
+	return
+}
+
+func (s *shards) GetEntry(key string) (*entry, bool) {
+	e, ok := s.Map.Load(key)
+	if ok {
+		return e.(*entry), ok
 	}
+	return nil, ok
 }
 
-func (s *shards) GetShard(key uint64) (shard *shard) {
-	return s[key]
+func (s *shards) SetEntry(key string, ent *entry) {
+	s.Map.Store(key, ent)
 }
 
-func (s shards) EntriesLen() (l int) {
-	for _, shard := range s {
-		l += shard.Len()
-	}
-	return
-}
-
-type shard struct {
-	entries entries
-	rw      sync.RWMutex
-}
-
-func (s *shard) Len() (l int) {
-	s.rw.RLock()
-	l = len(s.entries)
-	s.rw.RUnlock()
-	return
-}
-
-func (s *shard) EntryExists(key uint64) (ok bool) {
-	s.rw.RLock()
-	_, ok = s.entries[key]
-	s.rw.RUnlock()
-	return
-}
-
-func (s *shard) GetEntry(key uint64) (ent *entry, ok bool) {
-	s.rw.RLock()
-	ent, ok = s.entries[key]
-	s.rw.RUnlock()
-	return
-}
-
-func (s *shard) SetEntry(key uint64, ent *entry) {
-	s.rw.Lock()
-	s.entries[key] = ent
-	s.rw.Unlock()
-}
-
-func (s *shard) DropEntries(keys ...uint64) {
-	s.rw.Lock()
+func (s *shards) DropEntries(keys ...string) {
 	for _, k := range keys {
-		s.entries[k] = nil
-		delete(s.entries, k)
+		s.Map.Delete(k)
 	}
-	s.rw.Unlock()
 }

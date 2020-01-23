@@ -24,8 +24,7 @@ func NewPot(TTL time.Duration) Pot {
 }
 
 type expireTime struct {
-	key       uint64
-	shard     uint64
+	key       string
 	expiresAt int64
 }
 

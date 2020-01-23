@@ -4,15 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
 )
 
 type pot struct {
-	shards   shards
-	window   []expireTime
-	windowRW sync.RWMutex
-	ttl      time.Duration
+	shards shards
+	window []expireTime
+	ttl    time.Duration
 }
 
 func (p *pot) init(TTL time.Duration) {
@@ -29,31 +27,26 @@ func (p *pot) init(TTL time.Duration) {
 }
 
 func (p *pot) Purge() {
-	p.windowRW.Lock()
 	p.window = nil
 	p.shards.Purge()
-	p.windowRW.Unlock()
 }
 
 func (p *pot) Len() int {
-	return p.shards.EntriesLen()
+	return p.shards.Len()
 }
 
 func (p *pot) Drop(keys ...string) {
 	for _, key := range keys {
-		k, shard := keyGen(key)
-		p.shards.GetShard(shard).DropEntries(k)
+		p.shards.DropEntries(key)
 	}
 }
 
 func (p *pot) Exists(key string) (ok bool) {
-	k, shard := keyGen(key)
-	return p.shards.GetShard(shard).EntryExists(k)
+	return p.shards.EntryExists(key)
 }
 
 func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
-	k, shardID := keyGen(key)
-	ent, ok := p.shards.GetShard(shardID).GetEntry(k)
+	ent, ok := p.shards.GetEntry(key)
 	if !ok {
 		return nil, errors.New("not found")
 	}
@@ -62,8 +55,7 @@ func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
 }
 
 func (p *pot) Get(key string, i interface{}) (err error) {
-	k, shard := keyGen(key)
-	ent, ok := p.shards.GetShard(shard).GetEntry(k)
+	ent, ok := p.shards.GetEntry(key)
 	if !ok {
 		return errors.New("not found")
 	}
@@ -82,8 +74,7 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 }
 
 func (p *pot) Set(key string, i interface{}) {
-	var entry = &entry{}
-	k, shard := keyGen(key)
+	var entry = entry{}
 
 	var v reflect.Value
 	if reflect.TypeOf(i).Kind() == reflect.Ptr {
@@ -95,30 +86,26 @@ func (p *pot) Set(key string, i interface{}) {
 	entry.kind = v.String()[1:]
 
 	if p.ttl > 0 {
-		p.windowRW.Lock()
 		entry.expiresAt = time.Now().Add(p.ttl).UnixNano()
 		p.window = append(p.window, expireTime{
-			key:       k,
-			shard:     shard,
+			key:       key,
 			expiresAt: entry.expiresAt,
 		})
-		p.windowRW.Unlock()
 	}
 
-	p.shards.GetShard(shard).SetEntry(k, entry)
+	p.shards.SetEntry(key, &entry)
 
 	return
 }
 
 func (p *pot) dropExpiredEntries() {
 	var expired []expireTime
-	p.windowRW.Lock()
 	now := time.Now().UnixNano()
 	var expiredWindows int
 	for _, timeWindow := range p.window {
 		if now > timeWindow.expiresAt {
 			expiredWindows++
-			ent, ok := p.shards.GetShard(timeWindow.shard).GetEntry(timeWindow.key)
+			ent, ok := p.shards.GetEntry(timeWindow.key)
 			if ok && timeWindow.expiresAt == ent.expiresAt {
 				expired = append(expired, timeWindow)
 			}
@@ -127,12 +114,11 @@ func (p *pot) dropExpiredEntries() {
 		}
 	}
 	p.window = p.window[expiredWindows:]
-	p.windowRW.Unlock()
 
 	// fmt.Println(p.entries)
 	// fmt.Println("time window:", p.window, "--->", expired)
 	for _, entry := range expired {
-		p.shards.GetShard(entry.shard).DropEntries(entry.key)
+		p.shards.DropEntries(entry.key)
 	}
 
 }
