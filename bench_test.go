@@ -51,7 +51,7 @@ var icache Pot
 var freeCache *freecache.Cache
 var bigCache *bigcache.BigCache
 
-func Benchmark_iCache(b *testing.B) {
+func BenchmarkICache(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -59,7 +59,7 @@ func Benchmark_iCache(b *testing.B) {
 	}
 }
 
-func Benchmark_FreeCache(b *testing.B) {
+func BenchmarkFreeCache(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -67,7 +67,7 @@ func Benchmark_FreeCache(b *testing.B) {
 	}
 }
 
-func Benchmark_BigCache(b *testing.B) {
+func BenchmarkBigCache(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -96,7 +96,7 @@ func getFromBigCache() {
 	}
 }
 
-func Benchmark_iCache_Concurrent(b *testing.B) {
+func BenchmarkICacheConcurrent(b *testing.B) {
 	b.SetParallelism(100)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -107,7 +107,7 @@ func Benchmark_iCache_Concurrent(b *testing.B) {
 	})
 }
 
-func Benchmark_FreeCache_Concurrent(b *testing.B) {
+func BenchmarkFreeCacheConcurrent(b *testing.B) {
 	b.SetParallelism(100)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -118,7 +118,7 @@ func Benchmark_FreeCache_Concurrent(b *testing.B) {
 	})
 }
 
-func Benchmark_BigCache_Concurrent(b *testing.B) {
+func BenchmarkBigCacheConcurrent(b *testing.B) {
 	b.SetParallelism(100)
 	b.ReportAllocs()
 	b.ResetTimer()
