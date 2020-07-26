@@ -8,10 +8,12 @@
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
 icache is a cache library for Go with high concurrent access performance. 
-it is an in-memory key:value store/cache similar to memcache that
-is suitable for applications running on a single machine. Its major
-advantage is that it doesn't serialize your data and only stores values of
-your variables so they are thread-safe and you won't face data-race problem.
+Its major advantages over the other libraries is that it doesn't serialize
+your data and only stores values. As the result you won't need to unmarshal
+anything when you get the values from it. This saves you time and resources.
+
+Any object can be stored, for a given duration or forever, and the cache
+can be safely used by multiple goroutines.
 
 Any object can be stored, for a given duration or forever, and the cache
 can be safely used by multiple goroutines.
