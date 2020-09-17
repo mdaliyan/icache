@@ -51,4 +51,11 @@ func main() {
 
 	fmt.Println(err, u3)
 
+	// you also can add tags to your entries
+	pot.Set("foo", U, "tag1", "tag2")
+	pot.Set("faa", U, "tag1")
+	pot.Set("fom", U, "tag3")
+
+	// and delete multiple entries at once
+	pot.DropTags("tag1")
 }

@@ -10,8 +10,9 @@ type Pot interface {
 	Purge()
 	Len() (l int)
 	Drop(key ...string)
+	DropTags(tags ...string)
 	Exists(key string) bool
-	Set(k string, i interface{})
+	Set(k string, i interface{}, tags ...string)
 	Get(key string, i interface{}) (err error)
 	ExpireTime(key string) (t *time.Time, err error)
 }
@@ -23,16 +24,14 @@ func NewPot(TTL time.Duration) Pot {
 	return pot
 }
 
-type expireTime struct {
-	key       uint64
-	shard     uint64
-	expiresAt int64
-}
-
 type entries map[uint64]*entry
+type entrySlice []*entry
 
 type entry struct {
+	key       uint64
+	shard     uint64
 	value     reflect.Value
 	expiresAt int64
 	kind      string
+	tags      []uint64
 }
