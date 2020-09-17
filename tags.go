@@ -6,14 +6,14 @@ import (
 )
 
 type tags struct {
-	pairs map[string]entrySlice
+	pairs map[uint64]entrySlice
 	rw    sync.RWMutex
 	pot   *pot
 }
 
 func (t *tags) purge(p *pot) {
 	t.rw.Lock()
-	t.pairs = make(map[string]entrySlice)
+	t.pairs = make(map[uint64]entrySlice)
 	t.pot = p
 	t.rw.Unlock()
 }
@@ -59,14 +59,14 @@ func (t *tags) drop(e *entry) {
 	t.rw.Unlock()
 }
 
-func (t *tags) getEntries(tag string) (entries entrySlice) {
+func (t *tags) getEntries(tag uint64) (entries entrySlice) {
 	t.rw.RLock()
 	entries, _ = t.pairs[tag]
 	t.rw.RUnlock()
 	return
 }
 
-func (t *tags) dropTags(tags ...string) {
+func (t *tags) dropTags(tags ...uint64) {
 	for _, tag := range tags {
 		t.rw.Lock()
 		entries, _ := t.pairs[tag]

@@ -33,5 +33,5 @@ type entry struct {
 	value     reflect.Value
 	expiresAt int64
 	kind      string
-	tags      []string
+	tags      []uint64
 }

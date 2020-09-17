@@ -45,8 +45,7 @@ func (p *pot) Len() int {
 }
 
 func (p *pot) DropTags(tags ...string) {
-	p.tags.dropTags(tags...)
-	// p.tags.dropTags(TagKeyGen(tags)...)
+	p.tags.dropTags(TagKeyGen(tags)...)
 }
 
 func (p *pot) Drop(keys ...string) {
@@ -97,7 +96,7 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 		key:       k,
 		shard:     shard,
 		expiresAt: time.Now().Add(p.ttl).UnixNano(),
-		tags:      tags, //TagKeyGen(tags),
+		tags:      TagKeyGen(tags),
 	}
 
 	var v reflect.Value
