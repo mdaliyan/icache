@@ -20,9 +20,27 @@ func keyGen(key string) (hashVal, shardID uint64) {
 	return hash, hash & shardAndOpVal
 }
 
+// Sum64 gets the string and returns its uint64 hash value.
+func TagKeyGen(tags []string) []uint64 {
+	var count = len(tags)
+	if count == 0 {
+		return nil
+	}
+	keys := make([]uint64, count)
+	for i, tag := range tags {
+		var hash uint64 = offset64
+		for i := 0; i < len(tag); i++ {
+			hash ^= uint64(tag[i])
+			hash *= prime64
+		}
+		keys[i] = hash
+	}
+	return keys
+}
+
 //
-//func KeyShard(data []byte) (hashVal, segID uint64) {
+// func KeyShard(data []byte) (hashVal, segID uint64) {
 //	hashVal = xxhash.Sum64(data)
 //	segID = hashVal & shardAndOpVal
 //	return
-//}
+// }

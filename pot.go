@@ -13,8 +13,9 @@ var NonPointerErr = errors.New("second parameter needs to be a pointer")
 
 type pot struct {
 	shards   shards
-	window   []expireTime
+	window   entrySlice
 	windowRW sync.RWMutex
+	tags     tags
 	ttl      time.Duration
 }
 
@@ -34,12 +35,18 @@ func (p *pot) init(TTL time.Duration) {
 func (p *pot) Purge() {
 	p.windowRW.Lock()
 	p.window = nil
+	p.tags.purge(p)
 	p.shards.Purge()
 	p.windowRW.Unlock()
 }
 
 func (p *pot) Len() int {
 	return p.shards.EntriesLen()
+}
+
+func (p *pot) DropTags(tags ...string) {
+	p.tags.dropTags(tags...)
+	// p.tags.dropTags(TagKeyGen(tags)...)
 }
 
 func (p *pot) Drop(keys ...string) {
@@ -84,9 +91,14 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 	return nil
 }
 
-func (p *pot) Set(key string, i interface{}) {
-	var entry = &entry{}
+func (p *pot) Set(key string, i interface{}, tags ...string) {
 	k, shard := keyGen(key)
+	var entry = &entry{
+		key:       k,
+		shard:     shard,
+		expiresAt: time.Now().Add(p.ttl).UnixNano(),
+		tags:      tags, //TagKeyGen(tags),
+	}
 
 	var v reflect.Value
 	if reflect.TypeOf(i).Kind() == reflect.Ptr {
@@ -99,32 +111,29 @@ func (p *pot) Set(key string, i interface{}) {
 
 	if p.ttl > 0 {
 		p.windowRW.Lock()
-		entry.expiresAt = time.Now().Add(p.ttl).UnixNano()
-		p.window = append(p.window, expireTime{
-			key:       k,
-			shard:     shard,
-			expiresAt: entry.expiresAt,
-		})
+		p.window = append(p.window, entry)
 		p.windowRW.Unlock()
 	}
 
+	p.tags.add(entry)
 	p.shards.GetShard(shard).SetEntry(k, entry)
 
 	return
 }
 
 func (p *pot) dropExpiredEntries() {
-	var expired []expireTime
+	var expiredEntries entrySlice
 	p.windowRW.Lock()
 	now := time.Now().UnixNano()
 	var expiredWindows int
-	for _, timeWindow := range p.window {
-		if now > timeWindow.expiresAt {
+	for _, entry := range p.window {
+		if entry == nil {
 			expiredWindows++
-			ent, ok := p.shards.GetShard(timeWindow.shard).GetEntry(timeWindow.key)
-			if ok && timeWindow.expiresAt == ent.expiresAt {
-				expired = append(expired, timeWindow)
-			}
+			continue
+		}
+		if now > entry.expiresAt {
+			expiredWindows++
+			expiredEntries = append(expiredEntries, entry)
 		} else {
 			break
 		}
@@ -134,8 +143,13 @@ func (p *pot) dropExpiredEntries() {
 
 	// fmt.Println(p.entries)
 	// fmt.Println("time window:", p.window, "--->", expired)
-	for _, entry := range expired {
-		p.shards.GetShard(entry.shard).DropEntries(entry.key)
-	}
+	p.dropEntries(expiredEntries)
+}
 
+func (p *pot) dropEntries(entries entrySlice) {
+	for _, entry := range entries {
+		p.shards.GetShard(entry.shard).DropEntries(entry.key)
+		p.tags.drop(entry)
+		entry = nil
+	}
 }
