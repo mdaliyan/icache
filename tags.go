@@ -1,19 +1,18 @@
 package icache
 
 import (
-	`sort`
 	`sync`
 )
 
 type tags struct {
-	pairs map[uint64]entrySlice
+	pairs map[uint64]entries
 	rw    sync.RWMutex
 	pot   *pot
 }
 
 func (t *tags) purge(p *pot) {
 	t.rw.Lock()
-	t.pairs = make(map[uint64]entrySlice)
+	t.pairs = make(map[uint64]entries)
 	t.pot = p
 	t.rw.Unlock()
 }
@@ -24,17 +23,14 @@ func (t *tags) add(e *entry) {
 	}
 	t.rw.Lock()
 	for _, tag := range e.tags {
-		var infos, ok = t.pairs[tag]
-		if !ok {
-			t.pairs[tag] = entrySlice{e}
+		var _, ok = t.pairs[tag]
+		if ok {
+			t.pairs[tag][e.key] = e
 			continue
 		}
-		idx := sort.Search(len(infos), func(i int) bool {
-			return e.key >= infos[i].key
-		})
-		if infos[idx].key != e.key {
-			t.pairs[tag] = append(infos[:idx], append(entrySlice{e},infos[idx:]...)...)
-		}
+		tags := make(entries)
+		tags[e.key] = e
+		t.pairs[tag] = tags
 	}
 	t.rw.Unlock()
 }
@@ -45,13 +41,11 @@ func (t *tags) drop(e *entry) {
 	}
 	t.rw.Lock()
 	for _, tag := range e.tags {
-		var entries = t.pairs[tag]
-		idx := sort.Search(len(entries), func(i int) bool {
-			return e.key >= entries[i].key
-		})
-		if entries[idx].key == e.key {
-			t.pairs[tag] = append(entries[:idx], entries[idx+1:]...)
+		var _, ok = t.pairs[tag]
+		if ok {
+			continue
 		}
+		delete(t.pairs[tag], e.key)
 		if len(t.pairs[tag]) == 0 {
 			delete(t.pairs, tag)
 		}
@@ -61,16 +55,19 @@ func (t *tags) drop(e *entry) {
 
 func (t *tags) getEntries(tag uint64) (entries entrySlice) {
 	t.rw.RLock()
-	entries, _ = t.pairs[tag]
+	if _, ok := t.pairs[tag]; !ok {
+		return
+	}
+	for _, e := range t.pairs[tag] {
+		entries = append(entries, e)
+	}
 	t.rw.RUnlock()
 	return
 }
 
 func (t *tags) dropTags(tags ...uint64) {
 	for _, tag := range tags {
-		t.rw.Lock()
-		entries, _ := t.pairs[tag]
-		t.rw.Unlock()
+		entries := t.getEntries(tag)
 		t.pot.dropEntries(entries)
 	}
 }

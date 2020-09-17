@@ -48,6 +48,7 @@ func TestMultiEntryTagDrop(t *testing.T) {
 
 	p.Set("1", newItem("1"), "A")
 	p.Set("2", newItem("2"), "A", "B")
+	p.Set("e", newItem("6"), "A", "B")
 	a.True(p.Exists("1"))
 	a.True(p.Exists("2"))
 
