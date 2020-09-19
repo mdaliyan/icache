@@ -50,19 +50,21 @@ func (p *pot) DropTags(tags ...string) {
 
 func (p *pot) Drop(keys ...string) {
 	for _, key := range keys {
-		k, shard := keyGen(key)
-		p.shards.GetShard(shard).DropEntries(k)
+		e, ok := p.getEntry(key)
+		if ok {
+			p.dropEntry(e)
+		}
 	}
 }
 
 func (p *pot) Exists(key string) (ok bool) {
 	k, shard := keyGen(key)
-	return p.shards.GetShard(shard).EntryExists(k)
+	return p.shards[shard].EntryExists(k)
 }
 
 func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
 	k, shardID := keyGen(key)
-	ent, ok := p.shards.GetShard(shardID).GetEntry(k)
+	ent, ok := p.shards[shardID].GetEntry(k)
 	if !ok {
 		return nil, NotFoundErr
 	}
@@ -70,9 +72,18 @@ func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
 	return &ti, nil
 }
 
-func (p *pot) Get(key string, i interface{}) (err error) {
+func (p *pot) getEntry(key string) (*entry, bool) {
 	k, shard := keyGen(key)
-	ent, ok := p.shards.GetShard(shard).GetEntry(k)
+	e, ok := p.shards[shard].GetEntry(k)
+	if e == nil {
+		p.shards[shard].DropEntry(k)
+		ok = false
+	}
+	return e, ok
+}
+
+func (p *pot) Get(key string, i interface{}) (err error) {
+	ent, ok := p.getEntry(key)
 	if !ok {
 		return NotFoundErr
 	}
@@ -115,15 +126,16 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 	}
 
 	p.tags.add(entry)
-	p.shards.GetShard(shard).SetEntry(k, entry)
+	p.shards[shard].SetEntry(k, entry)
 
 	return
 }
 
 func (p *pot) dropExpiredEntries() {
 	var expiredEntries entrySlice
-	p.windowRW.Lock()
 	now := time.Now().UnixNano()
+
+	p.windowRW.Lock()
 	var expiredWindows int
 	for _, entry := range p.window {
 		if entry == nil {
@@ -140,15 +152,19 @@ func (p *pot) dropExpiredEntries() {
 	p.window = p.window[expiredWindows:]
 	p.windowRW.Unlock()
 
-	// fmt.Println(p.entries)
-	// fmt.Println("time window:", p.window, "--->", expired)
-	p.dropEntries(expiredEntries)
+	p.dropEntries(expiredEntries...)
 }
 
-func (p *pot) dropEntries(entries entrySlice) {
+func (p *pot) dropEntries(entries ...*entry) {
 	for _, entry := range entries {
-		p.shards.GetShard(entry.shard).DropEntries(entry.key)
 		p.tags.drop(entry)
+		p.shards[entry.shard].DropEntry(entry.key)
 		entry = nil
 	}
+}
+
+func (p *pot) dropEntry(e *entry) {
+	p.tags.drop(e)
+	p.shards[e.shard].DropEntry(e.key)
+	e = nil
 }

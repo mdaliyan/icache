@@ -12,10 +12,6 @@ func (s *shards) Purge() {
 	}
 }
 
-func (s *shards) GetShard(key uint64) (shard *shard) {
-	return s[key]
-}
-
 func (s shards) EntriesLen() (l int) {
 	for _, shard := range s {
 		l += shard.Len()
@@ -55,11 +51,9 @@ func (s *shard) SetEntry(key uint64, ent *entry) {
 	s.rw.Unlock()
 }
 
-func (s *shard) DropEntries(keys ...uint64) {
+func (s *shard) DropEntry(keys uint64) {
 	s.rw.Lock()
-	for _, k := range keys {
-		s.entries[k] = nil
-		delete(s.entries, k)
-	}
+	s.entries[keys] = nil
+	delete(s.entries, keys)
 	s.rw.Unlock()
 }
