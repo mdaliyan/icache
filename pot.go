@@ -51,9 +51,13 @@ func (p *pot) DropTags(tags ...string) {
 func (p *pot) Drop(keys ...string) {
 	for _, key := range keys {
 		e, ok := p.getEntry(key)
-		if ok {
-			p.dropEntry(e)
+		if !ok {
+			continue
 		}
+		e.deleted = true
+		p.tags.drop(e)
+		p.shards[e.shard].DropEntry(e.key)
+		e = nil
 	}
 }
 
@@ -84,7 +88,7 @@ func (p *pot) getEntry(key string) (*entry, bool) {
 
 func (p *pot) Get(key string, i interface{}) (err error) {
 	ent, ok := p.getEntry(key)
-	if !ok {
+	if !ok || ent.deleted {
 		return NotFoundErr
 	}
 
@@ -144,6 +148,7 @@ func (p *pot) dropExpiredEntries() {
 		}
 		if now > entry.expiresAt {
 			expiredWindows++
+			entry.deleted = true
 			expiredEntries = append(expiredEntries, entry)
 		} else {
 			break
@@ -157,14 +162,11 @@ func (p *pot) dropExpiredEntries() {
 
 func (p *pot) dropEntries(entries ...*entry) {
 	for _, entry := range entries {
+		if !entry.deleted {
+			continue
+		}
 		p.tags.drop(entry)
 		p.shards[entry.shard].DropEntry(entry.key)
 		entry = nil
 	}
-}
-
-func (p *pot) dropEntry(e *entry) {
-	p.tags.drop(e)
-	p.shards[e.shard].DropEntry(e.key)
-	e = nil
 }

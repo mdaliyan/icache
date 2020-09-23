@@ -34,4 +34,5 @@ type entry struct {
 	expiresAt int64
 	kind      string
 	tags      []uint64
+	deleted   bool
 }

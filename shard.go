@@ -47,7 +47,12 @@ func (s *shard) GetEntry(key uint64) (ent *entry, ok bool) {
 
 func (s *shard) SetEntry(key uint64, ent *entry) {
 	s.rw.Lock()
-	s.entries[key] = ent
+	e, ok := s.entries[key]
+	if ok {
+		*e = *ent
+	} else {
+		s.entries[key] = ent
+	}
 	s.rw.Unlock()
 }
 
