@@ -37,10 +37,3 @@ func TagKeyGen(tags []string) []uint64 {
 	}
 	return keys
 }
-
-//
-// func KeyShard(data []byte) (hashVal, segID uint64) {
-//	hashVal = xxhash.Sum64(data)
-//	segID = hashVal & shardAndOpVal
-//	return
-// }

@@ -1,15 +1,11 @@
 package icache
 
 import (
-	"encoding/json"
 	"math/rand"
 	"os"
 	"runtime"
 	"testing"
 	"time"
-
-	"github.com/allegro/bigcache"
-	"github.com/coocood/freecache"
 )
 
 func randomString() string {
@@ -25,17 +21,12 @@ func randomString() string {
 func TestMain(m *testing.M) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	icache = NewPot(time.Hour)
-	bigCache, _ = bigcache.NewBigCache(bigcache.DefaultConfig(10 * time.Minute))
-	freeCache = freecache.NewCache(100 * 100)
 	for i := 0; i < 10000; i++ {
 		id := randomString()
 		ids = append(ids, id)
 		U.ID = id
 		U.Age = rand.Intn(70)
-		Ujson, _ := json.Marshal(U)
 		icache.Set(id, U)
-		freeCache.Set([]byte(id), Ujson, int(time.Hour.Seconds()))
-		bigCache.Set(id, Ujson)
 	}
 	idsLen = len(ids) - 1
 	os.Exit(m.Run())
@@ -48,52 +39,18 @@ func randomID() string {
 var idsLen int
 var ids []string
 var icache Pot
-var freeCache *freecache.Cache
-var bigCache *bigcache.BigCache
 
 func BenchmarkICache(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		getFromICache()
+		get()
 	}
 }
 
-func BenchmarkFreeCache(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		getFromFreeCache()
-	}
-}
-
-func BenchmarkBigCache(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		getFromBigCache()
-	}
-}
-
-func getFromICache() {
+func get() {
 	var ut user
 	icache.Get(randomID(), &ut)
-}
-
-func getFromFreeCache() {
-	var ut user
-	byt, err := freeCache.Get([]byte(randomID()))
-	if err == nil {
-		json.Unmarshal(byt, &ut)
-	}
-}
-
-func getFromBigCache() {
-	var ut user
-	byt, err := bigCache.Get(randomID())
-	if err == nil {
-		json.Unmarshal(byt, &ut)
-	}
 }
 
 func BenchmarkICacheConcurrent(b *testing.B) {
@@ -102,29 +59,7 @@ func BenchmarkICacheConcurrent(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			getFromICache()
-		}
-	})
-}
-
-func BenchmarkFreeCacheConcurrent(b *testing.B) {
-	b.SetParallelism(100)
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			getFromFreeCache()
-		}
-	})
-}
-
-func BenchmarkBigCacheConcurrent(b *testing.B) {
-	b.SetParallelism(100)
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			getFromBigCache()
+			get()
 		}
 	})
 }
