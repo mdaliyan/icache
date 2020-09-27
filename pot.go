@@ -17,16 +17,35 @@ type pot struct {
 	windowRW sync.RWMutex
 	tags     tags
 	ttl      time.Duration
+	tick     *time.Ticker
+	closed   chan bool
+}
+
+func (p *pot) reset() {
+	p.ttl = 0
+	p.Purge()
+	p.closed = make(chan bool)
+	if p.tick != nil {
+		p.tick.Stop()
+		p.tick = nil
+	}
 }
 
 func (p *pot) init(TTL time.Duration) {
+	p.reset()
 	p.ttl = TTL
-	p.Purge()
 	if p.ttl > 1 {
+		p.tick = time.NewTicker(time.Second)
 		go func() {
 			for {
-				p.dropExpiredEntries()
-				time.Sleep(time.Second)
+				select {
+				case <-p.closed:
+					p.reset()
+					p.closed = nil
+					return
+				case t := <-p.tick.C:
+					p.dropExpiredEntries(t)
+				}
 			}
 		}()
 	}
@@ -135,9 +154,9 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 	return
 }
 
-func (p *pot) dropExpiredEntries() {
+func (p *pot) dropExpiredEntries(at time.Time) {
 	var expiredEntries entrySlice
-	now := time.Now().UnixNano()
+	now := at.UnixNano()
 
 	p.windowRW.Lock()
 	var expiredWindows int
