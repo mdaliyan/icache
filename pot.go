@@ -106,8 +106,13 @@ func (p *pot) getEntry(key string) (*entry, bool) {
 }
 
 func (p *pot) Get(key string, i interface{}) (err error) {
-	ent, ok := p.getEntry(key)
-	if !ok || ent.deleted {
+	e, ok := p.getEntry(key)
+	if !ok {
+		return NotFoundErr
+	}
+	e.rw.RLock()
+	defer e.rw.RUnlock()
+	if e.deleted {
 		return NotFoundErr
 	}
 
@@ -115,23 +120,23 @@ func (p *pot) Get(key string, i interface{}) (err error) {
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return NonPointerErr
 	}
-	if ent.kind != v.String()[2:] {
+	if e.kind != v.String()[2:] {
 		vKind := v.String()[2:]
-		return fmt.Errorf(`requested entry type does not match: "%s" != "%s"`, ent.kind[:len(ent.kind)-7], vKind[:len(vKind)-7])
+		return fmt.Errorf(`requested entry type does not match: "%s" != "%s"`, e.kind[:len(e.kind)-7], vKind[:len(vKind)-7])
 	}
-	v.Elem().Set(ent.value)
+	v.Elem().Set(e.value)
 
 	return nil
 }
 
 func (p *pot) Set(key string, i interface{}, tags ...string) {
 	k, shard := keyGen(key)
-	var entry = &entry{
-		key:       k,
-		shard:     shard,
-		expiresAt: time.Now().Add(p.ttl).UnixNano(),
-		tags:      TagKeyGen(tags),
+	e, ok := p.shards[shard].GetEntry(k)
+	if !ok {
+		e = &entry{}
 	}
+	e.rw.Lock()
+	defer e.rw.Unlock()
 
 	var v reflect.Value
 	if reflect.TypeOf(i).Kind() == reflect.Ptr {
@@ -139,17 +144,22 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 	} else {
 		v = reflect.ValueOf(i)
 	}
-	entry.value = v
-	entry.kind = v.String()[1:]
+	e.key = k
+	e.shard = shard
+	e.expiresAt = time.Now().Add(p.ttl).UnixNano()
+	e.tags = TagKeyGen(tags)
+	e.value = v
+	e.deleted = false
+	e.kind = v.String()[1:]
 
 	if p.ttl > 0 {
 		p.windowRW.Lock()
-		p.window = append(p.window, entry)
+		p.window = append(p.window, e)
 		p.windowRW.Unlock()
 	}
 
-	p.tags.add(entry)
-	p.shards[shard].SetEntry(k, entry)
+	p.tags.add(e)
+	p.shards[shard].SetEntry(k, e)
 
 	return
 }
@@ -165,13 +175,16 @@ func (p *pot) dropExpiredEntries(at time.Time) {
 			expiredWindows++
 			continue
 		}
+		entry.rw.Lock()
 		if now > entry.expiresAt {
 			expiredWindows++
 			entry.deleted = true
 			expiredEntries = append(expiredEntries, entry)
 		} else {
+			entry.rw.Unlock()
 			break
 		}
+		entry.rw.Unlock()
 	}
 	p.window = p.window[expiredWindows:]
 	p.windowRW.Unlock()
@@ -181,11 +194,14 @@ func (p *pot) dropExpiredEntries(at time.Time) {
 
 func (p *pot) dropEntries(entries ...*entry) {
 	for _, entry := range entries {
+		entry.rw.Lock()
 		if !entry.deleted {
+			entry.rw.Unlock()
 			continue
 		}
 		p.tags.drop(entry)
 		p.shards[entry.shard].DropEntry(entry.key)
+		entry.rw.Unlock()
 		entry = nil
 	}
 }

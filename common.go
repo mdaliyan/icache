@@ -2,6 +2,7 @@ package icache
 
 import (
 	"reflect"
+	`sync`
 	"time"
 )
 
@@ -35,4 +36,5 @@ type entry struct {
 	kind      string
 	tags      []uint64
 	deleted   bool
+	rw sync.RWMutex
 }
