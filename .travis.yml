@@ -4,6 +4,7 @@ language: go
 go:
   - 1.13.x
   - 1.14.x
+  - 1.15.x
   - master
 
 # Skip the install step. Don't `go get` dependencies. Only build with the code
@@ -14,8 +15,6 @@ before_script:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
   - go get github.com/mdaliyan/icache
-  - go get github.com/allegro/bigcache
-  - go get github.com/coocood/freecache
   - go get github.com/stretchr/testify/assert
 
 script:
