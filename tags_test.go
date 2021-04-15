@@ -1,11 +1,10 @@
 package icache
 
 import (
-	`math/rand`
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -22,37 +21,50 @@ func newItem(id string) item {
 	}
 }
 
+func assertValueIsTrue(t *testing.T, value bool) {
+	assertValueIs(t, true, value)
+}
+func assertValueIsFalse(t *testing.T, value bool) {
+	assertValueIs(t, false, value)
+}
+
+func assertValueIs(t *testing.T, expected, actual bool) {
+	if expected != actual {
+		fmt.Println(fmt.Sprintf("expected: %v", expected))
+		fmt.Println(fmt.Sprintf("actual: %v", actual))
+		t.Fail()
+	}
+}
+
 func TestSingleEntryTagDrop(t *testing.T) {
 	// var i item
-	a := assert.New(t)
 	p := new(pot)
 	p.init(time.Minute)
 
 	tags1 := []string{"A", "B", "C", "D", "E"}
 	p.Set("1", newItem("1"), tags1...)
-	a.True(p.Exists("1"))
+	assertValueIsTrue(t, p.Exists("1"))
 
 	tags2 := []string{"A", "B"}
 	p.Set("2", newItem("2"), tags2...)
 
 	p.DropTags("C")
-	a.False(p.Exists("1"))
-	a.True(p.Exists("2"))
+	assertValueIsFalse(t, p.Exists("1"))
+	assertValueIsTrue(t, p.Exists("2"))
 }
 
 func TestMultiEntryTagDrop(t *testing.T) {
 	// var i item
-	a := assert.New(t)
 	p := new(pot)
 	p.init(time.Minute)
 
 	p.Set("1", newItem("1"), "A")
 	p.Set("2", newItem("2"), "A", "B")
 	p.Set("e", newItem("6"), "A", "B")
-	a.True(p.Exists("1"))
-	a.True(p.Exists("2"))
+	assertValueIsTrue(t, p.Exists("1"))
+	assertValueIsTrue(t, p.Exists("2"))
 
 	p.DropTags("A")
-	a.False(p.Exists("1"))
-	a.False(p.Exists("2"))
+	assertValueIsFalse(t, p.Exists("1"))
+	assertValueIsFalse(t, p.Exists("2"))
 }

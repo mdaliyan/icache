@@ -1,7 +1,7 @@
 package icache
 
 import (
-	`sync`
+	"sync"
 )
 
 type tags struct {
