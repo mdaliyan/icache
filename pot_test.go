@@ -3,8 +3,6 @@ package icache
 import (
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type user struct {
@@ -30,53 +28,49 @@ var U = user{
 }
 
 func TestUpdateExpireTime(t *testing.T) {
-	a := assert.New(t)
 	p := NewPot[user](time.Minute)
 	p.Set("1", U)
 	expiresAt, err := p.ExpireTime("1")
-	a.NoError(err, "entry should have expiration time")
+	assertNoError(t, err, "entry should have expiration time")
 	time.Sleep(time.Microsecond * 50)
 
 	nilExpiresAt, err := p.ExpireTime("2")
-	a.Error(err, "entry should have no expiration time")
-	a.Nil(nilExpiresAt, "expiration time of missing entry should be nil")
+	assertError(t, err, "entry should have no expiration time")
+	assertNotNil(t, nilExpiresAt, "expiration time of missing entry should be nil")
 
 	p.Set("1", U)
 	newExpiresAt, err := p.ExpireTime("1")
-	a.NoError(err, "entry should have expiration time")
-	a.NotEqual(expiresAt, newExpiresAt, "expiration should be changed")
+	assertNoError(t, err, "entry should have expiration time")
+	assertNotEqual(t, expiresAt, newExpiresAt, "expiration should be changed")
 
 }
 
 func TestDrop(t *testing.T) {
-	a := assert.New(t)
 	p := NewPot[user](0)
 	p.Set("1", U)
-	a.Equal(1, p.Len())
+	assertEqual(t, 1, p.Len())
 	p.Set("2", U)
 	p.Set("3", U)
-	a.Equal(3, p.Len())
+	assertEqual(t, 3, p.Len())
 	p.Drop("1")
-	a.Equal(2, p.Len())
+	assertEqual(t, 2, p.Len())
 	p.Purge()
-	a.Equal(0, p.Len())
+	assertEqual(t, 0, p.Len())
 }
 
 func TestNewCache(t *testing.T) {
-	a := assert.New(t)
 	p := NewPot[user](0)
 	p.Set(U.ID, U)
 	u1, err := p.Get(U.ID)
-	a.NoError(err, "cachedUser1 should be found")
+	assertNoError(t, err, "cachedUser1 should be found")
 	u1.Name = "Jodie"
 
 	cachedUser2, err := p.Get(U.ID)
-	a.NoError(err, "cachedUser2 should be found")
-	a.Equal("John", cachedUser2.Name)
+	assertNoError(t, err, "cachedUser2 should be found")
+	assertEqual(t, "John", cachedUser2.Name)
 }
 
 func TestAutoExpired(t *testing.T) {
-	a := assert.New(t)
 	p := NewPot[user](time.Second * 2)
 	user1 := user{Name: "john", ID: "1"}
 	user2 := user{Name: "jack", ID: "2"}
@@ -89,22 +83,22 @@ func TestAutoExpired(t *testing.T) {
 
 	p.Set(user3.ID, user3)
 
-	a.True(p.Exists(user1.ID), "user1 should be found")
+	assertIsTrue(t, p.Exists(user1.ID), "user1 should be found")
 	_, err := p.Get(user1.ID)
-	a.NoError(err, "user1 should be found")
-	a.False(p.Exists(user2.ID), "user2 should not be found")
+	assertNoError(t, err, "user1 should be found")
+	assertIsFalse(t, p.Exists(user2.ID), "user2 should not be found")
 	_, err = p.Get(user2.ID)
-	a.Equal(err, NotFoundErr, "user2 should not be found")
+	assertEqual(t, err, NotFoundErr, "user2 should not be found")
 	p.Set(user2.ID, user2)
 
 	time.Sleep(time.Second * 2)
 
-	a.True(p.Exists(user2.ID), "user2 should be found")
+	assertIsTrue(t, p.Exists(user2.ID), "user2 should be found")
 	_, err = p.Get(user2.ID)
-	a.NoError(err, "user2 should be found")
+	assertNoError(t, err, "user2 should be found")
 	_, err = p.Get(user1.ID)
-	a.Error(err, "user1 should be expired nowUint")
-	a.False(p.Exists(user1.ID), "user1 should be expired after 2 seconds")
+	assertError(t, err, "user1 should be expired nowUint")
+	assertIsFalse(t, p.Exists(user1.ID), "user1 should be expired after 2 seconds")
 
 	time.Sleep(time.Second * 2)
 }

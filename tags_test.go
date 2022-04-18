@@ -1,7 +1,6 @@
 package icache
 
 import (
-	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -21,35 +20,20 @@ func newItem(id string) item {
 	}
 }
 
-func assertValueIsTrue(t *testing.T, value bool) {
-	assertValueIs(t, true, value)
-}
-func assertValueIsFalse(t *testing.T, value bool) {
-	assertValueIs(t, false, value)
-}
-
-func assertValueIs(t *testing.T, expected, actual bool) {
-	if expected != actual {
-		fmt.Println(fmt.Sprintf("expected: %v", expected))
-		fmt.Println(fmt.Sprintf("actual: %v", actual))
-		t.Fail()
-	}
-}
-
 func TestSingleEntryTagDrop(t *testing.T) {
 	// var i item
 	p := NewPot[item](time.Minute)
 
 	tags1 := []string{"A", "B", "C", "D", "E"}
 	p.Set("1", newItem("1"), tags1...)
-	assertValueIsTrue(t, p.Exists("1"))
+	assertIsTrue(t, p.Exists("1"))
 
 	tags2 := []string{"A", "B"}
 	p.Set("2", newItem("2"), tags2...)
 
 	p.DropTags("C")
-	assertValueIsFalse(t, p.Exists("1"))
-	assertValueIsTrue(t, p.Exists("2"))
+	assertIsFalse(t, p.Exists("1"))
+	assertIsTrue(t, p.Exists("2"))
 }
 
 func TestMultiEntryTagDrop(t *testing.T) {
@@ -59,10 +43,10 @@ func TestMultiEntryTagDrop(t *testing.T) {
 	p.Set("1", newItem("1"), "A")
 	p.Set("2", newItem("2"), "A", "B")
 	p.Set("e", newItem("6"), "A", "B")
-	assertValueIsTrue(t, p.Exists("1"))
-	assertValueIsTrue(t, p.Exists("2"))
+	assertIsTrue(t, p.Exists("1"))
+	assertIsTrue(t, p.Exists("2"))
 
 	p.DropTags("A")
-	assertValueIsFalse(t, p.Exists("1"))
-	assertValueIsFalse(t, p.Exists("2"))
+	assertIsFalse(t, p.Exists("1"))
+	assertIsFalse(t, p.Exists("2"))
 }

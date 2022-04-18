@@ -1,22 +1,19 @@
 # icache
 
-[![Build Status](https://travis-ci.org/mdaliyan/icache.svg?branch=master)](https://travis-ci.org/mdaliyan/icache)
+[![Build Status](https://travis-ci.com/mdaliyan/icache.svg?branch=master)](https://travis-ci.org/mdaliyan/icache)
 [![Coverage Status](https://coveralls.io/repos/github/mdaliyan/icache/badge.svg?branch=master)](https://coveralls.io/github/mdaliyan/icache?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mdaliyan/icache?style=flat)](https://goreportcard.com/report/github.com/mdaliyan/icache)
 [![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/mdaliyan/icache) 
 [![godoc](https://godoc.org/github.com/mdaliyan/icache.svg?status.svg)](https://godoc.org/github.com/mdaliyan/icache)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
-icache is a cache library for Go with high concurrent access performance. 
-Its major advantages over the other libraries is that it doesn't serialize
-your data and only stores values. As the result you won't need to unmarshal
-anything when you get the values from it. This saves you time and resources.
+icache is a no dependency generic cache library for Go with high concurrent access performance. 
+Its major advantages over the other libraries is that it doesn't serialize the data and only 
+holds the values as they are. As the result you won't need to unmarshal anything when you get
+the values. This saves you time and resources.
 
-Any object can be stored, for a given duration or forever, and the cache
-can be safely used by multiple goroutines.
-
-Any object can be stored, for a given duration or forever, and the cache
-can be safely used by multiple goroutines.
+Any object can be stored in icache, even pointers, for a given duration or forever,
+and the cache can be safely used by multiple goroutines.
 
 # Installation
 
@@ -27,8 +24,10 @@ go get github.com/mdaliyan/icache/v2
 # Usage
 
 ```go 
-// make na new Pot with the default expiration time of 1 Hour to store user structs 
-// set ttl to 0 to disable expiration entirely
+// make a new Pot:
+// - to store user structs 
+// - with global expiration time of 1 Hour
+// * set ttl to 0 to disable expiration entirely
 var pot = icache.NewPot[user](time.Hour) 
 
 var U = user{
