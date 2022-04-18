@@ -17,6 +17,8 @@ and the cache can be safely used by multiple goroutines.
 
 # Installation
 
+icache requires go v1.8.0 and above. For previous versions of go follow instructions at
+[version v1.x.x](https://github.com/mdaliyan/icache/tree/v1). V1 will be maintained separately.
 ```bash
 go get github.com/mdaliyan/icache/v2
 ```
