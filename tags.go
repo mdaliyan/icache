@@ -52,19 +52,6 @@ func (t *tags[T]) drop(e *entry[T]) {
 	t.rw.Unlock()
 }
 
-func (t *tags[T]) getEntries(tag uint64) (entries entrySlice[T]) {
-	t.rw.RLock()
-	if _, ok := t.pairs[tag]; !ok {
-		t.rw.RUnlock()
-		return
-	}
-	for _, e := range t.pairs[tag] {
-		entries = append(entries, e)
-	}
-	t.rw.RUnlock()
-	return
-}
-
 func (t *tags[T]) dropTags(tags ...uint64) {
 	for _, tag := range tags {
 		var entries entrySlice[T]
