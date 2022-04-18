@@ -38,8 +38,7 @@ func assertValueIs(t *testing.T, expected, actual bool) {
 
 func TestSingleEntryTagDrop(t *testing.T) {
 	// var i item
-	p := new(pot)
-	p.init(time.Minute)
+	p := NewPot[item](time.Minute)
 
 	tags1 := []string{"A", "B", "C", "D", "E"}
 	p.Set("1", newItem("1"), tags1...)
@@ -55,8 +54,7 @@ func TestSingleEntryTagDrop(t *testing.T) {
 
 func TestMultiEntryTagDrop(t *testing.T) {
 	// var i item
-	p := new(pot)
-	p.init(time.Minute)
+	p := NewPot[item](time.Minute)
 
 	p.Set("1", newItem("1"), "A")
 	p.Set("2", newItem("2"), "A", "B")

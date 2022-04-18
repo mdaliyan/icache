@@ -2,8 +2,6 @@ package icache
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -11,19 +9,20 @@ import (
 var NotFoundErr = errors.New("not found")
 var NonPointerErr = errors.New("second parameter needs to be a pointer")
 
-type pot struct {
-	shards   shards
-	window   entrySlice
+type pot[T any] struct {
+	shards   shards[T]
+	window   entrySlice[T]
 	windowRW sync.RWMutex
-	tags     tags
+	tags     tags[T]
 	ttl      time.Duration
 	tick     *time.Ticker
 	closed   chan bool
 }
 
-func (p *pot) reset() {
+func (p *pot[T]) reset() {
 	p.ttl = 0
 	p.Purge()
+	p.tags.pot = p
 	p.closed = make(chan bool)
 	if p.tick != nil {
 		p.tick.Stop()
@@ -31,7 +30,7 @@ func (p *pot) reset() {
 	}
 }
 
-func (p *pot) init(TTL time.Duration) {
+func (p *pot[T]) init(TTL time.Duration) {
 	p.reset()
 	p.ttl = TTL
 	if p.ttl > 1 {
@@ -51,41 +50,24 @@ func (p *pot) init(TTL time.Duration) {
 	}
 }
 
-func (p *pot) Purge() {
+func (p *pot[T]) Purge() {
 	p.windowRW.Lock()
 	p.window = nil
-	p.tags.purge(p)
+	p.tags.purge()
 	p.shards.Purge()
 	p.windowRW.Unlock()
 }
 
-func (p *pot) Len() int {
+func (p *pot[T]) Len() int {
 	return p.shards.EntriesLen()
 }
 
-func (p *pot) DropTags(tags ...string) {
-	p.tags.dropTags(TagKeyGen(tags)...)
-}
-
-func (p *pot) Drop(keys ...string) {
-	for _, key := range keys {
-		e, ok := p.getEntry(key)
-		if !ok {
-			continue
-		}
-		e.deleted = true
-		p.tags.drop(e)
-		p.shards[e.shard].DropEntry(e.key)
-		e = nil
-	}
-}
-
-func (p *pot) Exists(key string) (ok bool) {
+func (p *pot[T]) Exists(key string) (ok bool) {
 	k, shard := keyGen(key)
 	return p.shards[shard].EntryExists(k)
 }
 
-func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
+func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
 	k, shardID := keyGen(key)
 	ent, ok := p.shards[shardID].GetEntry(k)
 	if !ok {
@@ -95,7 +77,7 @@ func (p *pot) ExpireTime(key string) (t *time.Time, err error) {
 	return &ti, nil
 }
 
-func (p *pot) getEntry(key string) (*entry, bool) {
+func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 	k, shard := keyGen(key)
 	e, ok := p.shards[shard].GetEntry(k)
 	if e == nil {
@@ -105,52 +87,34 @@ func (p *pot) getEntry(key string) (*entry, bool) {
 	return e, ok
 }
 
-func (p *pot) Get(key string, i interface{}) (err error) {
+func (p *pot[T]) Get(key string) (v T, err error) {
 	e, ok := p.getEntry(key)
 	if !ok {
-		return NotFoundErr
+		return v, NotFoundErr
 	}
 	e.rw.RLock()
 	defer e.rw.RUnlock()
 	if e.deleted {
-		return NotFoundErr
+		return v, NotFoundErr
 	}
 
-	v := reflect.ValueOf(i)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return NonPointerErr
-	}
-	if e.kind != v.String()[2:] {
-		vKind := v.String()[2:]
-		return fmt.Errorf(`requested entry type does not match: "%s" != "%s"`, e.kind[:len(e.kind)-7], vKind[:len(vKind)-7])
-	}
-	v.Elem().Set(e.value)
-
-	return nil
+	return e.data, nil
 }
 
-func (p *pot) Set(key string, i interface{}, tags ...string) {
+func (p *pot[T]) Set(key string, v T, tags ...string) {
 	k, shard := keyGen(key)
-	e, ok := p.shards[shard].GetEntry(k)
-	if !ok {
-		e = &entry{}
+	e, found := p.shards[shard].GetEntry(k)
+	if found {
+		p.dropEntry(e)
 	}
-	e.rw.Lock()
-	defer e.rw.Unlock()
-
-	var v reflect.Value
-	if reflect.TypeOf(i).Kind() == reflect.Ptr {
-		v = reflect.ValueOf(i).Elem()
-	} else {
-		v = reflect.ValueOf(i)
+	e = &entry[T]{
+		key:       k,
+		shard:     shard,
+		expiresAt: time.Now().Add(p.ttl).UnixNano(),
+		tags:      TagKeyGen(tags),
+		data:      v,
+		deleted:   false,
 	}
-	e.key = k
-	e.shard = shard
-	e.expiresAt = time.Now().Add(p.ttl).UnixNano()
-	e.tags = TagKeyGen(tags)
-	e.value = v
-	e.deleted = false
-	e.kind = v.String()[1:]
 
 	if p.ttl > 0 {
 		p.windowRW.Lock()
@@ -164,8 +128,20 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 	return
 }
 
-func (p *pot) dropExpiredEntries(at time.Time) {
-	var expiredEntries entrySlice
+func (p *pot[T]) DropTags(tags ...string) {
+	p.tags.dropTags(TagKeyGen(tags)...)
+}
+
+func (p *pot[T]) Drop(keys ...string) {
+	for _, key := range keys {
+		if e, ok := p.getEntry(key); ok {
+			p.dropEntry(e)
+		}
+	}
+}
+
+func (p *pot[T]) dropExpiredEntries(at time.Time) {
+	var expiredEntries entrySlice[T]
 	now := at.UnixNano()
 
 	p.windowRW.Lock()
@@ -192,16 +168,20 @@ func (p *pot) dropExpiredEntries(at time.Time) {
 	p.dropEntries(expiredEntries...)
 }
 
-func (p *pot) dropEntries(entries ...*entry) {
-	for _, entry := range entries {
-		entry.rw.Lock()
-		if !entry.deleted {
-			entry.rw.Unlock()
+func (p *pot[T]) dropEntries(entries ...*entry[T]) {
+	for _, e := range entries {
+		e.rw.Lock()
+		if !e.deleted {
+			e.rw.Unlock()
 			continue
 		}
-		p.tags.drop(entry)
-		p.shards[entry.shard].DropEntry(entry.key)
-		entry.rw.Unlock()
-		entry = nil
+		p.dropEntry(e)
 	}
+}
+
+func (p *pot[T]) dropEntry(e *entry[T]) {
+	e.deleted = true
+	p.tags.drop(e)
+	p.shards[e.shard].DropEntry(e.key)
+	e = nil
 }

@@ -31,7 +31,7 @@ var U = user{
 
 func TestUpdateExpireTime(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(time.Minute)
+	p := NewPot[user](time.Minute)
 	p.Set("1", U)
 	expiresAt, err := p.ExpireTime("1")
 	a.NoError(err, "entry should have expiration time")
@@ -48,22 +48,9 @@ func TestUpdateExpireTime(t *testing.T) {
 
 }
 
-func TestGetError(t *testing.T) {
-	a := assert.New(t)
-	p := NewPot(0)
-	p.Set("1", U)
-	var cachedUser1 string
-	a.Error(p.Get("1", &cachedUser1), "type mismatch error")
-
-	p.Set("2", &U)
-	a.Error(p.Get("2", cachedUser1), "needs to pass a pointer")
-	a.Error(p.Get("2", nil), "needs to pass a pointer")
-
-}
-
 func TestDrop(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(0)
+	p := NewPot[user](0)
 	p.Set("1", U)
 	a.Equal(1, p.Len())
 	p.Set("2", U)
@@ -77,20 +64,20 @@ func TestDrop(t *testing.T) {
 
 func TestNewCache(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(0)
+	p := NewPot[user](0)
 	p.Set(U.ID, U)
-	var cachedUser1 user
-	a.NoError(p.Get(U.ID, &cachedUser1), "cachedUser1 should be found")
-	cachedUser1.Name = "Jodie"
+	u1, err := p.Get(U.ID)
+	a.NoError(err, "cachedUser1 should be found")
+	u1.Name = "Jodie"
 
-	var cachedUser2 user
-	a.NoError(p.Get(U.ID, &cachedUser2), "cachedUser2 should be found")
+	cachedUser2, err := p.Get(U.ID)
+	a.NoError(err, "cachedUser2 should be found")
 	a.Equal("John", cachedUser2.Name)
 }
 
 func TestAutoExpired(t *testing.T) {
 	a := assert.New(t)
-	p := NewPot(time.Second * 2)
+	p := NewPot[user](time.Second * 2)
 	user1 := user{Name: "john", ID: "1"}
 	user2 := user{Name: "jack", ID: "2"}
 	user3 := user{Name: "jane", ID: "3"}
@@ -102,18 +89,21 @@ func TestAutoExpired(t *testing.T) {
 
 	p.Set(user3.ID, user3)
 
-	var cachedUser user
 	a.True(p.Exists(user1.ID), "user1 should be found")
-	a.NoError(p.Get(user1.ID, &cachedUser), "user1 should be found")
+	_, err := p.Get(user1.ID)
+	a.NoError(err, "user1 should be found")
 	a.False(p.Exists(user2.ID), "user2 should not be found")
-	a.Error(p.Get(user2.ID, &cachedUser), "user2 should not be found")
+	_, err = p.Get(user2.ID)
+	a.Equal(err, NotFoundErr, "user2 should not be found")
 	p.Set(user2.ID, user2)
 
 	time.Sleep(time.Second * 2)
 
 	a.True(p.Exists(user2.ID), "user2 should be found")
-	a.NoError(p.Get(user2.ID, &cachedUser), "user2 should be found")
-	a.Error(p.Get(user1.Name, &user1), "user1 should be expired nowUint")
+	_, err = p.Get(user2.ID)
+	a.NoError(err, "user2 should be found")
+	_, err = p.Get(user1.ID)
+	a.Error(err, "user1 should be expired nowUint")
 	a.False(p.Exists(user1.ID), "user1 should be expired after 2 seconds")
 
 	time.Sleep(time.Second * 2)

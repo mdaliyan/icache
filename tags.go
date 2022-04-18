@@ -4,20 +4,19 @@ import (
 	"sync"
 )
 
-type tags struct {
-	pairs map[uint64]entries
+type tags[T any] struct {
+	pairs map[uint64]entries[T]
 	rw    sync.RWMutex
-	pot   *pot
+	pot   *pot[T]
 }
 
-func (t *tags) purge(p *pot) {
+func (t *tags[T]) purge() {
 	t.rw.Lock()
-	t.pairs = make(map[uint64]entries)
-	t.pot = p
+	t.pairs = make(map[uint64]entries[T])
 	t.rw.Unlock()
 }
 
-func (t *tags) add(e *entry) {
+func (t *tags[T]) add(e *entry[T]) {
 	if e == nil || e.tags == nil {
 		return
 	}
@@ -28,14 +27,14 @@ func (t *tags) add(e *entry) {
 			t.pairs[tag][e.key] = e
 			continue
 		}
-		tags := make(entries)
+		tags := make(entries[T])
 		tags[e.key] = e
 		t.pairs[tag] = tags
 	}
 	t.rw.Unlock()
 }
 
-func (t *tags) drop(e *entry) {
+func (t *tags[T]) drop(e *entry[T]) {
 	if e == nil || e.tags == nil {
 		return
 	}
@@ -53,7 +52,7 @@ func (t *tags) drop(e *entry) {
 	t.rw.Unlock()
 }
 
-func (t *tags) getEntries(tag uint64) (entries entrySlice) {
+func (t *tags[T]) getEntries(tag uint64) (entries entrySlice[T]) {
 	t.rw.RLock()
 	if _, ok := t.pairs[tag]; !ok {
 		t.rw.RUnlock()
@@ -66,9 +65,9 @@ func (t *tags) getEntries(tag uint64) (entries entrySlice) {
 	return
 }
 
-func (t *tags) dropTags(tags ...uint64) {
+func (t *tags[T]) dropTags(tags ...uint64) {
 	for _, tag := range tags {
-		var entries entrySlice
+		var entries entrySlice[T]
 		t.rw.RLock()
 		if _, ok := t.pairs[tag]; !ok {
 			t.rw.RUnlock()
