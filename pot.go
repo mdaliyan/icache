@@ -1,13 +1,9 @@
 package icache
 
 import (
-	"errors"
 	"sync"
 	"time"
 )
-
-var NotFoundErr = errors.New("not found")
-var NonPointerErr = errors.New("second parameter needs to be a pointer")
 
 type pot[T any] struct {
 	shards   shards[T]
@@ -19,35 +15,38 @@ type pot[T any] struct {
 	closed   chan bool
 }
 
-func (p *pot[T]) reset() {
-	p.ttl = 0
+func (p *pot[T]) setTTL(TTL time.Duration) {
+	p.ttl = TTL
+}
+
+func (p *pot[T]) init() {
 	p.Purge()
 	p.tags.pot = p
 	p.closed = make(chan bool)
-	if p.tick != nil {
-		p.tick.Stop()
-		p.tick = nil
+	if p.ttl < 1 {
+		return
 	}
+	p.tick = time.NewTicker(time.Second)
+	go func() {
+		for {
+			select {
+			case t := <-p.tick.C: // triggered every second
+				p.dropExpiredEntries(t)
+			case <-p.closed: // triggered when the pot is closed
+				return
+			}
+		}
+	}()
 }
 
-func (p *pot[T]) init(TTL time.Duration) {
-	p.reset()
-	p.ttl = TTL
-	if p.ttl > 1 {
-		p.tick = time.NewTicker(time.Second)
-		go func() {
-			for {
-				select {
-				case <-p.closed:
-					p.reset()
-					p.closed = nil
-					return
-				case t := <-p.tick.C:
-					p.dropExpiredEntries(t)
-				}
-			}
-		}()
+func (p *pot[T]) Close() error {
+	if p.ttl < 1 {
+		return ErrNotClosable
 	}
+	p.tick.Stop()
+	close(p.closed)
+	p.Purge()
+	return nil
 }
 
 func (p *pot[T]) Purge() {
@@ -71,7 +70,7 @@ func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
 	k, shardID := keyGen(key)
 	ent, ok := p.shards[shardID].GetEntry(k)
 	if !ok {
-		return nil, NotFoundErr
+		return nil, ErrNotFound
 	}
 	ti := time.Unix(ent.expiresAt, 0)
 	return &ti, nil
@@ -90,12 +89,12 @@ func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 func (p *pot[T]) Get(key string) (v T, err error) {
 	e, ok := p.getEntry(key)
 	if !ok {
-		return v, NotFoundErr
+		return v, ErrNotFound
 	}
 	e.rw.RLock()
 	defer e.rw.RUnlock()
 	if e.deleted {
-		return v, NotFoundErr
+		return v, ErrNotFound
 	}
 
 	return e.data, nil
@@ -111,7 +110,7 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 		key:       k,
 		shard:     shard,
 		expiresAt: time.Now().Add(p.ttl).UnixNano(),
-		tags:      TagKeyGen(tags),
+		tags:      tagKeyGen(tags...),
 		data:      v,
 		deleted:   false,
 	}
@@ -129,7 +128,7 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 }
 
 func (p *pot[T]) DropTags(tags ...string) {
-	p.tags.dropTags(TagKeyGen(tags)...)
+	p.tags.dropTags(tagKeyGen(tags...)...)
 }
 
 func (p *pot[T]) Drop(keys ...string) {

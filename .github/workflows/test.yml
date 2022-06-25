@@ -36,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Run tests
-        run: go test -failfast -v -race -covermode=atomic
+        run: go test -failfast -v -race -timeout=1m -covermode=atomic
 
   coverage:
     runs-on: ubuntu-latest

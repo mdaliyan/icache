@@ -20,13 +20,11 @@ func randomString() string {
 
 func TestMain(m *testing.M) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	icache = NewPot[user](time.Hour)
+	icache = NewPot[item](WithTTL(time.Hour))
 	for i := 0; i < 10000; i++ {
 		id := randomString()
 		ids = append(ids, id)
-		U.ID = id
-		U.Age = rand.Intn(70)
-		icache.Set(id, U)
+		icache.Set(id, newItem(id))
 	}
 	idsLen = len(ids) - 1
 	os.Exit(m.Run())
@@ -38,7 +36,7 @@ func randomID() string {
 
 var idsLen int
 var ids []string
-var icache Pot[user]
+var icache Pot[item]
 
 func BenchmarkICache(b *testing.B) {
 	b.ReportAllocs()
@@ -48,10 +46,10 @@ func BenchmarkICache(b *testing.B) {
 	}
 }
 
-var ut user
+var it item
 
 func get() {
-	ut, _ = icache.Get(randomID())
+	it, _ = icache.Get(randomID())
 }
 
 func BenchmarkICacheConcurrent(b *testing.B) {

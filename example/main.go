@@ -24,7 +24,9 @@ func main() {
 
 	// make na new Pot with the default expiration time of 1 Hour to store user structs
 	// set expiretion time to 0 to disable expiration totally
-	var pot = icache.NewPot[user](time.Hour)
+	var pot = icache.NewPot[user](
+		icache.WithTTL(time.Hour),
+	)
 
 	var U = user{
 		ID:   "foo",

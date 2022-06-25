@@ -10,7 +10,7 @@ const (
 	shardsCount   = 256
 )
 
-// Sum64 gets the string and returns its uint64 hash data.
+// keyGen generates the hash and the shard id for the given key.
 func keyGen(key string) (hashVal, shardID uint64) {
 	var hash uint64 = offset64
 	for i := 0; i < len(key); i++ {
@@ -20,8 +20,8 @@ func keyGen(key string) (hashVal, shardID uint64) {
 	return hash, hash & shardAndOpVal
 }
 
-// Sum64 gets the string and returns its uint64 hash data.
-func TagKeyGen(tags []string) []uint64 {
+// tagKeyGen generates the hash for the given tags.
+func tagKeyGen(tags ...string) []uint64 {
 	var count = len(tags)
 	if count == 0 {
 		return nil
