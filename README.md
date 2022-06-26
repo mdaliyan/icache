@@ -6,26 +6,29 @@
 [![godoc](https://godoc.org/github.com/mdaliyan/icache.svg?status.svg)](https://godoc.org/github.com/mdaliyan/icache)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
-icache is a no-dependency generic cache library for Go with high concurrent access performance.
+icache is a no-dependency, generic support cache library for Go with high concurrent access performance.
+icache _doean't require serialization_, so the benchmark report you see at the bottom of the page
+is what you get at the end, there is no need to marshal and unmarshal anything and waste your
+valuable resources.
 
 ## Features
-
-- **Generics**: Using generics makes it type-safe, and it helps to have zero allocation.
+- **Thread safe**: icache stores the data in multiple shards and uses a separate mutex for each shard.
+- **Generics**: Using generics makes it type-safe.
 - **Tags**: icache supports tags for entries and entries with the shared tags can be dropped at the same time.
-- **Pointer friendly**: Any object can be stored in icache, even pointers.
+- **Pointer friendly**: icache stores data as is. any object can be stored in icache, even pointers.
 - **TTL**: ttl can be set to any thing from 1 seconds to infinity.
 
 ## Installation
 
-icache requires go v1.8.0 and above.
+icache v2 requires go v1.8.0 and above.
 ```bash
 go get github.com/mdaliyan/icache/v2
 ```
 
 ### previous version for Go < 1.18
 
-The previous version (i.e. v1) is compatible with Go < `1.18`, and it's advantage over the other libraries is that it
-stores the values of the variables, so there's no need to waste resources for serialization.
+icache v1 is compatible with Go < `1.18`, and it also doean't require serialization.
+it uses reflections to make sure about your data type.
 
 Follow instructions at [version v1.x.x](https://github.com/mdaliyan/icache/tree/v1) for installation and usage. 
 V1 will be maintained separately.
@@ -68,10 +71,11 @@ goarch: amd64
 pkg: github.com/mdaliyan/icache/v2
 cpu: Intel(R) Core(TM) i7-8557U CPU @ 1.70GHz
 BenchmarkICache
-BenchmarkICache-8             	 9570999	       118.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkICache-8             	9570999	    118.1 ns/op	   0 B/op	  0 allocs/op
 BenchmarkICacheConcurrent
-BenchmarkICacheConcurrent-8   	 6117471	       191.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkICacheConcurrent-8   	6117471	    191.4 ns/op	   0 B/op	  0 allocs/op
 ```
 
 ## Plans for later
-Different invalidation Strategies can be added if it's needed.   
+- Different invalidation Strategies can be added if it's needed. 
+- Maybe Remote sync
