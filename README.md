@@ -64,6 +64,11 @@ pot.Set("fom", User, "tag3")
 pot.DropTags("tag1")
 ```
 
+## Invalidation Strategies
+- By **Key**
+- By **Tag**
+- By **TTL**: Using the `WithTTL()` option.
+
 ## Benchmarks
 ```bash
 goos: darwin
