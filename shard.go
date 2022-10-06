@@ -49,7 +49,13 @@ func (s *shard) SetEntry(key uint64, ent *entry) {
 	s.rw.Lock()
 	e, ok := s.entries[key]
 	if ok {
-		*e = *ent
+		e.key = ent.key
+		e.shard = ent.shard
+		e.value = ent.value
+		e.expiresAt = ent.expiresAt
+		e.kind = ent.kind
+		e.tags = ent.tags
+		e.deleted = ent.deleted
 	} else {
 		s.entries[key] = ent
 	}

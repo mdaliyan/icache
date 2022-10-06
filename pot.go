@@ -160,8 +160,6 @@ func (p *pot) Set(key string, i interface{}, tags ...string) {
 
 	p.tags.add(e)
 	p.shards[shard].SetEntry(k, e)
-
-	return
 }
 
 func (p *pot) dropExpiredEntries(at time.Time) {
