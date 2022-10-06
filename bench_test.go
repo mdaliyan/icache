@@ -50,7 +50,7 @@ func BenchmarkICache(b *testing.B) {
 
 func get() {
 	var ut user
-	icache.Get(randomID(), &ut)
+	_ = icache.Get(randomID(), &ut)
 }
 
 func BenchmarkICacheConcurrent(b *testing.B) {

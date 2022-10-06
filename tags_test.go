@@ -30,8 +30,9 @@ func assertValueIsFalse(t *testing.T, value bool) {
 
 func assertValueIs(t *testing.T, expected, actual bool) {
 	if expected != actual {
-		fmt.Println(fmt.Sprintf("expected: %v", expected))
-		fmt.Println(fmt.Sprintf("actual: %v", actual))
+		fmt.Printf("expected: %v\n", expected)
+		fmt.Printf("actual: %v\n", actual)
+		fmt.Printf("actual: %v\n", actual)
 		t.Fail()
 	}
 }
