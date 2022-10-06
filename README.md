@@ -2,8 +2,8 @@
 
 ![example workflow](https://github.com/mdaliyan/icache/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/mdaliyan/icache/badge.svg?branch=master)](https://coveralls.io/github/mdaliyan/icache?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/mdaliyan/icache)](https://goreportcard.com/report/github.com/mdaliyan/icache)
-[![godoc](https://godoc.org/github.com/mdaliyan/icache.svg?status.svg)](https://godoc.org/github.com/mdaliyan/icache)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mdaliyan/icache/v2)](https://goreportcard.com/report/github.com/mdaliyan/icache/v2)
+[![Go Reference](https://pkg.go.dev/badge/github.com/mdaliyan/icache/v2.svg)](https://pkg.go.dev/github.com/mdaliyan/icache/v2)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat)](https://raw.githubusercontent.com/labstack/echo/master/LICENSE)
 
 icache is a no-dependency, generic support cache library for Go with high concurrent access performance.

@@ -47,7 +47,7 @@ type Pot[T any] interface {
 	Close() error
 }
 
-// NewPot creates new Pot with a given ttl duration
+// NewPot creates new cache Pot with the given options.
 func NewPot[T any](options ...Option) Pot[T] {
 	p := new(pot[T])
 	for _, option := range options {
