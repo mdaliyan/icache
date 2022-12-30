@@ -78,7 +78,7 @@ func failAssertion(t *testing.T, not bool, expected, actual interface{}, msg ...
 	} else {
 		fmt.Print("expected:")
 	}
-	fmt.Println(fmt.Sprintf("%v", expected))
-	fmt.Println(fmt.Sprintf("actual: %v", actual))
+	fmt.Printf("%v\n", expected)
+	fmt.Printf("actual: %v\n", actual)
 	t.Fail()
 }
