@@ -128,7 +128,7 @@ func TestWithTTLOption(t *testing.T) {
 
 	t.Run("entries should expire after the given time", func(t *testing.T) {
 
-		p := NewPot[item](WithTTL(2 * time.Second))
+		p := NewPot[item](WithTTL(3 * time.Second))
 
 		p.Set(item1.ID, item1)
 
@@ -138,7 +138,7 @@ func TestWithTTLOption(t *testing.T) {
 		assertIsTrue(t, p.Exists(item1.ID), "item1 must exist after 1 second")
 		assertIsTrue(t, p.Exists(item2.ID), "item2 must exist after insertion")
 
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(2500 * time.Millisecond)
 
 		p.Set(item3.ID, item3)
 		assertIsFalse(t, p.Exists(item1.ID), "item1 must not exist after 2 seconds")

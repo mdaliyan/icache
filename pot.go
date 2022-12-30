@@ -123,8 +123,6 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 
 	p.tags.add(e)
 	p.shards[shard].SetEntry(k, e)
-
-	return
 }
 
 func (p *pot[T]) DropTags(tags ...string) {
