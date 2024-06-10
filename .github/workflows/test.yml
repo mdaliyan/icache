@@ -11,7 +11,7 @@ on:
       - v1
 
 jobs:
-  lint and test:
+  lint-and-test:
     strategy:
       matrix:
         go-version: [1.18.1, 1.19.13, 1.20.14, 1.21.10, 1.22.3]
