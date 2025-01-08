@@ -74,8 +74,6 @@ func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
 		return nil, ErrNotFound
 	}
 
-	e.rw.RLock()
-	defer e.rw.RUnlock()
 	ti := time.UnixMilli(e.expiresAt)
 	return &ti, nil
 }
@@ -108,8 +106,6 @@ func (p *pot[T]) Get(key string) (v T, err error) {
 		return v, ErrNotFound
 	}
 
-	e.rw.RLock()
-	defer e.rw.RUnlock()
 	if e.deleted {
 		p.dropEntry(e)
 		return v, ErrNotFound
@@ -170,15 +166,12 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 			expiredWindows++
 			continue
 		}
-		e.rw.Lock()
 		if e.expiresAt >= now { // not expired yet
-			e.rw.Unlock()
 			break
 		}
 		e.deleted = true
 		p.dropEntry(e)
 		expiredWindows++
-		e.rw.Unlock()
 	}
 	if expiredWindows > 0 {
 		remaining := len(p.window) - expiredWindows
