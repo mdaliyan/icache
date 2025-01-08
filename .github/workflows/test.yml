@@ -5,6 +5,7 @@ on:
     branches:
       # - master   # push on master is not possible anymore
       - feature/*
+      - test
   pull_request:
     branches:
       - master
