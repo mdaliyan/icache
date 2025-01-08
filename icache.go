@@ -37,8 +37,10 @@ type Pot[T any] interface {
 	// returns ErrNotFound if the key doesn't exist.
 	Get(key string) (v T, err error)
 
-	// GetByTag restores ann T entries previously stored with the given tag
-	// returns ErrNotFound if there is no entries to return.
+	// GetByTag returns all entries that were stored with the given tag.
+	// The order of returned entries is not guaranteed.
+	// Returns ErrNotFound if no entries exist with the given tag.
+	// The returned slice can be safely modified by the caller.
 	GetByTag(tag string) ([]T, error)
 
 	// ExpireTime returns expire time of the given entry

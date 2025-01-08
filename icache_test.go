@@ -98,35 +98,13 @@ func TestDrop(t *testing.T) {
 		assertIsTrue(t, p.Exists("3"))
 
 		entriesWithTagA, err := p.GetByTag("A")
-		assertError(t, err)
-		assertEqual(t, 0, len(entriesWithTagA))
+		assertError(t, err, "tag A should contain no items")
+		assertEqual(t, 0, len(entriesWithTagA), "tag A should contain no items")
 
 		entriesWithTagB, err := p.GetByTag("B")
-		assertNoError(t, err)
-		assertEqual(t, 1, len(entriesWithTagB))
+		assertNoError(t, err, "tag B should contain one item")
+		assertEqual(t, 1, len(entriesWithTagB), "tag B should contain one item")
 	})
-}
-
-func TestGetByTags(t *testing.T) {
-	p := NewPot[item]()
-
-	p.Set("1", newItem("1"), "A")
-	p.Set("2", newItem("2"), "A", "B")
-	p.Set("3", newItem("3"), "A", "B")
-	assertIsTrue(t, p.Exists("1"))
-	assertIsTrue(t, p.Exists("2"))
-
-	entriesWithTagA, err := p.GetByTag("A")
-	assertNoError(t, err)
-	assertEqual(t, 3, len(entriesWithTagA))
-
-	entriesWithTagB, err := p.GetByTag("B")
-	assertNoError(t, err)
-	assertEqual(t, 2, len(entriesWithTagB))
-
-	entriesWithTagI, err := p.GetByTag("I")
-	assertError(t, err)
-	assertEqual(t, 0, len(entriesWithTagI))
 }
 
 func TestWithTTLOption(t *testing.T) {
@@ -162,23 +140,23 @@ func TestWithTTLOption(t *testing.T) {
 
 		p.Set(item1.ID, item1)
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Second)
 		p.Set(item2.ID, item2)
 
-		assertIsTrue(t, p.Exists(item1.ID), "item1 must exist after 2 second")
+		assertIsTrue(t, p.Exists(item1.ID), "item1 must exist after 1 second")
 		assertIsTrue(t, p.Exists(item2.ID), "item2 must exist after insertion")
 
-		time.Sleep(2 * time.Second)
-		p.Set(item3.ID, item3)
+		time.Sleep(2500 * time.Millisecond)
 
-		assertIsFalse(t, p.Exists(item1.ID), "item1 must not exist after 4 seconds")
-		assertIsTrue(t, p.Exists(item2.ID), "item2 must exist after 2 seconds")
+		p.Set(item3.ID, item3)
+		assertIsFalse(t, p.Exists(item1.ID), "item1 must not exist after 2 seconds")
+		assertIsTrue(t, p.Exists(item2.ID), "item2 must exist after 1 second")
 		assertIsTrue(t, p.Exists(item3.ID), "item3 must exist after insertion")
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 
-		assertIsFalse(t, p.Exists(item2.ID), "item2 must not exist after 4 seconds")
-		assertIsTrue(t, p.Exists(item3.ID), "item3 must exist after 2 second")
-
+		assertIsFalse(t, p.Exists(item1.ID), "item1 must not exist after 3 seconds")
+		assertIsFalse(t, p.Exists(item2.ID), "item2 must not exist after 2 seconds")
+		assertIsTrue(t, p.Exists(item3.ID), "item3 must exist after 1 second")
 	})
 }

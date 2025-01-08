@@ -69,7 +69,9 @@ func (p *pot[T]) Exists(key string) (ok bool) {
 	defer p.windowRW.RUnlock()
 
 	k, shard := keyGen(key)
-	return p.shards[shard].EntryExists(k)
+	exists := p.shards[shard].EntryExists(k)
+
+	return exists
 }
 
 func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
@@ -102,12 +104,19 @@ func (p *pot[T]) GetByTag(tag string) ([]T, error) {
 	defer p.windowRW.RUnlock()
 
 	entries := p.tags.getEntriesWithTags(tagKeyGen(tag)...)
-	if len(entries) == 0 {
-		return nil, ErrNotFound
-	}
 	result := make([]T, len(entries))
 	for i, e := range entries {
-		result[i] = e.data
+		if e == nil {
+			continue
+		}
+		e.rw.RLock()
+		if !e.deleted {
+			result[i] = e.data
+		}
+		e.rw.RUnlock()
+	}
+	if len(entries) == 0 {
+		return nil, ErrNotFound
 	}
 	return result, nil
 }
@@ -132,6 +141,7 @@ func (p *pot[T]) Get(key string) (v T, err error) {
 }
 
 func (p *pot[T]) Set(key string, v T, tags ...string) {
+	expireTime := time.Now().Add(p.ttl).UnixNano()
 	p.windowRW.Lock()
 	defer p.windowRW.Unlock()
 
@@ -143,7 +153,7 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 	e = &entry[T]{
 		key:       k,
 		shard:     shard,
-		expiresAt: time.Now().Add(p.ttl).UnixNano(),
+		expiresAt: expireTime,
 		tags:      tagKeyGen(tags...),
 		data:      v,
 		deleted:   false,
@@ -183,20 +193,20 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 	defer p.windowRW.Unlock()
 
 	var expiredWindows int
-	for _, entry := range p.window {
-		if entry == nil {
+	for _, e := range p.window {
+		if e == nil {
 			expiredWindows++
 			continue
 		}
-		entry.rw.Lock()
-		if now < entry.expiresAt {
-			entry.rw.Unlock()
+		e.rw.Lock()
+		if e.expiresAt >= now { // not expired yet
+			e.rw.Unlock()
 			break
 		}
-		entry.deleted = true
-		p.dropEntry(entry)
+		e.deleted = true
+		p.dropEntry(e)
 		expiredWindows++
-		entry.rw.Unlock()
+		e.rw.Unlock()
 	}
 	if expiredWindows > 0 {
 		p.window = append(entrySlice[T]{}, p.window[expiredWindows:]...)

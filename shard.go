@@ -35,7 +35,12 @@ func (s *shard[T]) EntryExists(key uint64) bool {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 	e, ok := s.entries[key]
-	return ok && !e.deleted
+	if !ok || e == nil {
+		return false
+	}
+	e.rw.RLock()
+	defer e.rw.RUnlock()
+	return !e.deleted
 }
 
 func (s *shard[T]) GetEntry(key uint64) (ent *entry[T], ok bool) {

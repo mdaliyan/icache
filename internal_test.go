@@ -72,6 +72,7 @@ func assertNotNil(t *testing.T, i interface{}, msg ...string) {
 }
 
 func failAssertion(t *testing.T, not bool, expected, actual interface{}, msg ...string) {
+	t.Helper()
 	if len(msg) != 0 {
 		fmt.Println("assertion: ", msg)
 	}
