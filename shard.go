@@ -59,6 +59,5 @@ func (s *shard[T]) DropEntry(key uint64) {
 	s.rw.Lock()
 	defer s.rw.Unlock()
 
-	s.entries[key] = nil
 	delete(s.entries, key)
 }

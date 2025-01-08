@@ -39,7 +39,7 @@ type Pot[T any] interface {
 
 	// GetByTag restores ann T entries previously stored with the given tag
 	// returns ErrNotFound if there is no entries to return.
-	GetByTag(tag string) ([]*entry[T], error)
+	GetByTag(tag string) ([]T, error)
 
 	// ExpireTime returns expire time of the given entry
 	ExpireTime(key string) (t *time.Time, err error)

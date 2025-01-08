@@ -21,7 +21,6 @@ func (p *pot[T]) setTTL(TTL time.Duration) {
 
 func (p *pot[T]) init() {
 	p.Purge()
-	p.tags.pot = p
 	p.closed = make(chan bool)
 	if p.ttl < 1 {
 		return
@@ -98,7 +97,7 @@ func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 	return e, ok
 }
 
-func (p *pot[T]) GetByTag(tag string) ([]*entry[T], error) {
+func (p *pot[T]) GetByTag(tag string) ([]T, error) {
 	p.windowRW.RLock()
 	defer p.windowRW.RUnlock()
 
@@ -106,7 +105,11 @@ func (p *pot[T]) GetByTag(tag string) ([]*entry[T], error) {
 	if len(entries) == 0 {
 		return nil, ErrNotFound
 	}
-	return entries, nil
+	result := make([]T, len(entries))
+	for i, e := range entries {
+		result[i] = e.data
+	}
+	return result, nil
 }
 
 func (p *pot[T]) Get(key string) (v T, err error) {

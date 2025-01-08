@@ -2,7 +2,6 @@ package icache
 
 type tags[T any] struct {
 	pairs map[uint64]entries[T]
-	pot   *pot[T]
 }
 
 func (t *tags[T]) purge() {
