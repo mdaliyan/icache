@@ -89,13 +89,14 @@ func TestDrop(t *testing.T) {
 
 		p.Set("1", newItem("1"), "A")
 		p.Set("2", newItem("2"), "A", "B")
-		p.Set("e", newItem("6"), "A", "B")
+		p.Set("3", newItem("6"), "B")
 		assertIsTrue(t, p.Exists("1"))
 		assertIsTrue(t, p.Exists("2"))
 
 		p.DropTags("A")
 		assertIsFalse(t, p.Exists("1"))
 		assertIsFalse(t, p.Exists("2"))
+		assertIsTrue(t, p.Exists("3"))
 	})
 }
 

@@ -144,9 +144,7 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 	}
 
 	if p.ttl > 0 {
-		p.windowRW.Lock()
 		p.window = append(p.window, e)
-		p.windowRW.Unlock()
 	}
 
 	p.tags.add(e)
@@ -186,14 +184,13 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 			continue
 		}
 		entry.rw.Lock()
-		if now > entry.expiresAt {
-			expiredWindows++
-			entry.deleted = true
-			expiredEntries = append(expiredEntries, entry)
-		} else {
+		if now < entry.expiresAt {
 			entry.rw.Unlock()
 			break
 		}
+		entry.deleted = true
+		expiredEntries = append(expiredEntries, entry)
+		expiredWindows++
 		entry.rw.Unlock()
 	}
 	if len(expiredEntries) > 0 {
