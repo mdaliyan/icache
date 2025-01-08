@@ -33,6 +33,7 @@ func (p *pot[T]) init() {
 			case t := <-p.tick.C: // triggered every second
 				p.dropExpiredEntries(t)
 			case <-p.closed: // triggered when the pot is closed
+				p.Purge()
 				return
 			}
 		}
@@ -51,28 +52,39 @@ func (p *pot[T]) Close() error {
 
 func (p *pot[T]) Purge() {
 	p.windowRW.Lock()
+	defer p.windowRW.Unlock()
+
 	p.window = nil
 	p.tags.purge()
 	p.shards.Purge()
-	p.windowRW.Unlock()
 }
 
 func (p *pot[T]) Len() int {
+	p.windowRW.RLock()
+	defer p.windowRW.RUnlock()
+
 	return p.shards.EntriesLen()
 }
 
 func (p *pot[T]) Exists(key string) (ok bool) {
+	p.windowRW.RLock()
+	defer p.windowRW.RUnlock()
 	k, shard := keyGen(key)
 	return p.shards[shard].EntryExists(k)
 }
 
 func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
-	k, shardID := keyGen(key)
-	ent, ok := p.shards[shardID].GetEntry(k)
+	p.windowRW.RLock()
+	defer p.windowRW.RUnlock()
+
+	e, ok := p.getEntry(key)
 	if !ok {
 		return nil, ErrNotFound
 	}
-	ti := time.Unix(ent.expiresAt, 0)
+
+	e.rw.RLock()
+	defer e.rw.RUnlock()
+	ti := time.Unix(e.expiresAt, 0)
 	return &ti, nil
 }
 
@@ -86,14 +98,27 @@ func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 	return e, ok
 }
 
+func (p *pot[T]) GetByTag(tag string) ([]*entry[T], error) {
+	entries := p.tags.getEntriesWithTags(tagKeyGen(tag)...)
+	if len(entries) == 0 {
+		return nil, ErrNotFound
+	}
+	return entries, nil
+}
+
 func (p *pot[T]) Get(key string) (v T, err error) {
+	p.windowRW.RLock()
+	defer p.windowRW.RUnlock()
+
 	e, ok := p.getEntry(key)
 	if !ok {
 		return v, ErrNotFound
 	}
+
 	e.rw.RLock()
 	defer e.rw.RUnlock()
 	if e.deleted {
+		p.dropEntry(e)
 		return v, ErrNotFound
 	}
 
@@ -101,6 +126,9 @@ func (p *pot[T]) Get(key string) (v T, err error) {
 }
 
 func (p *pot[T]) Set(key string, v T, tags ...string) {
+	p.windowRW.Lock()
+	defer p.windowRW.Unlock()
+
 	k, shard := keyGen(key)
 	e, found := p.shards[shard].GetEntry(k)
 	if found {
@@ -126,10 +154,17 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 }
 
 func (p *pot[T]) DropTags(tags ...string) {
-	p.tags.dropTags(tagKeyGen(tags...)...)
+	p.windowRW.Lock()
+	defer p.windowRW.Unlock()
+	entriesToDrop := p.tags.getEntriesWithTags(tagKeyGen(tags...)...)
+	for _, e := range entriesToDrop {
+		p.dropEntry(e)
+	}
 }
 
 func (p *pot[T]) Drop(keys ...string) {
+	p.windowRW.Lock()
+	defer p.windowRW.Unlock()
 	for _, key := range keys {
 		if e, ok := p.getEntry(key); ok {
 			p.dropEntry(e)
@@ -138,11 +173,13 @@ func (p *pot[T]) Drop(keys ...string) {
 }
 
 func (p *pot[T]) dropExpiredEntries(at time.Time) {
-	var expiredEntries entrySlice[T]
 	now := at.UnixNano()
 
 	p.windowRW.Lock()
+	defer p.windowRW.Unlock()
+
 	var expiredWindows int
+	var expiredEntries entrySlice[T]
 	for _, entry := range p.window {
 		if entry == nil {
 			expiredWindows++
@@ -159,26 +196,19 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 		}
 		entry.rw.Unlock()
 	}
-	p.window = p.window[expiredWindows:]
-	p.windowRW.Unlock()
-
-	p.dropEntries(expiredEntries...)
-}
-
-func (p *pot[T]) dropEntries(entries ...*entry[T]) {
-	for _, e := range entries {
-		e.rw.Lock()
-		if !e.deleted {
-			e.rw.Unlock()
-			continue
+	if len(expiredEntries) > 0 {
+		p.window = append(entrySlice[T]{}, p.window[expiredWindows:]...)
+		for _, e := range expiredEntries {
+			p.dropEntry(e)
 		}
-		p.dropEntry(e)
 	}
 }
 
 func (p *pot[T]) dropEntry(e *entry[T]) {
 	e.deleted = true
-	p.tags.drop(e)
+	for _, tag := range e.tags {
+		p.tags.dropTagIfNoOtherEntriesExist(tag)
+	}
 	p.shards[e.shard].DropEntry(e.key)
 	e = nil
 }
