@@ -84,18 +84,26 @@ func TestDrop(t *testing.T) {
 	})
 
 	t.Run("multiple by tag", func(t *testing.T) {
-		// var i item
-		p := NewPot[item](WithTTL(time.Minute))
+		p := NewPot[item]()
 
 		p.Set("1", newItem("1"), "A")
 		p.Set("2", newItem("2"), "A", "B")
-		p.Set("e", newItem("6"), "A", "B")
+		p.Set("3", newItem("3"), "B")
 		assertIsTrue(t, p.Exists("1"))
 		assertIsTrue(t, p.Exists("2"))
 
 		p.DropTags("A")
 		assertIsFalse(t, p.Exists("1"))
 		assertIsFalse(t, p.Exists("2"))
+		assertIsTrue(t, p.Exists("3"))
+
+		entriesWithTagA, err := p.GetByTag("A")
+		assertError(t, err, "tag A should contain no items")
+		assertEqual(t, 0, len(entriesWithTagA), "tag A should contain no items")
+
+		entriesWithTagB, err := p.GetByTag("B")
+		assertNoError(t, err, "tag B should contain one item")
+		assertEqual(t, 1, len(entriesWithTagB), "tag B should contain one item")
 	})
 }
 
@@ -150,6 +158,5 @@ func TestWithTTLOption(t *testing.T) {
 		assertIsFalse(t, p.Exists(item1.ID), "item1 must not exist after 3 seconds")
 		assertIsFalse(t, p.Exists(item2.ID), "item2 must not exist after 2 seconds")
 		assertIsTrue(t, p.Exists(item3.ID), "item3 must exist after 1 second")
-
 	})
 }

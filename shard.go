@@ -6,6 +6,7 @@ type shards[T any] [shardsCount]*shard[T]
 
 func (s *shards[T]) Purge() {
 	for i := 0; i < shardsCount; i++ {
+		s[i] = nil
 		s[i] = &shard[T]{
 			entries: entries[T]{},
 		}
@@ -24,24 +25,28 @@ type shard[T any] struct {
 	rw      sync.RWMutex
 }
 
-func (s *shard[T]) Len() (l int) {
+func (s *shard[T]) Len() int {
 	s.rw.RLock()
-	l = len(s.entries)
-	s.rw.RUnlock()
-	return
+	defer s.rw.RUnlock()
+	return len(s.entries)
 }
 
-func (s *shard[T]) EntryExists(key uint64) (ok bool) {
+func (s *shard[T]) EntryExists(key uint64) bool {
 	s.rw.RLock()
-	_, ok = s.entries[key]
-	s.rw.RUnlock()
-	return
+	defer s.rw.RUnlock()
+	e, ok := s.entries[key]
+	if !ok || e == nil {
+		return false
+	}
+	e.rw.RLock()
+	defer e.rw.RUnlock()
+	return !e.deleted
 }
 
 func (s *shard[T]) GetEntry(key uint64) (ent *entry[T], ok bool) {
 	s.rw.RLock()
+	defer s.rw.RUnlock()
 	ent, ok = s.entries[key]
-	s.rw.RUnlock()
 	return
 }
 
@@ -50,13 +55,14 @@ func (s *shard[T]) SetEntry(key uint64, ent *entry[T]) {
 		s.DropEntry(key)
 	}
 	s.rw.Lock()
+	defer s.rw.Unlock()
+
 	s.entries[key] = ent
-	s.rw.Unlock()
 }
 
-func (s *shard[T]) DropEntry(keys uint64) {
+func (s *shard[T]) DropEntry(key uint64) {
 	s.rw.Lock()
-	s.entries[keys] = nil
-	delete(s.entries, keys)
-	s.rw.Unlock()
+	defer s.rw.Unlock()
+
+	delete(s.entries, key)
 }
