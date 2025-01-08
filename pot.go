@@ -33,7 +33,6 @@ func (p *pot[T]) init() {
 			case t := <-p.tick.C: // triggered every second
 				p.dropExpiredEntries(t)
 			case <-p.closed: // triggered when the pot is closed
-				p.Purge()
 				return
 			}
 		}
@@ -69,6 +68,7 @@ func (p *pot[T]) Len() int {
 func (p *pot[T]) Exists(key string) (ok bool) {
 	p.windowRW.RLock()
 	defer p.windowRW.RUnlock()
+
 	k, shard := keyGen(key)
 	return p.shards[shard].EntryExists(k)
 }
@@ -99,6 +99,9 @@ func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 }
 
 func (p *pot[T]) GetByTag(tag string) ([]*entry[T], error) {
+	p.windowRW.RLock()
+	defer p.windowRW.RUnlock()
+
 	entries := p.tags.getEntriesWithTags(tagKeyGen(tag)...)
 	if len(entries) == 0 {
 		return nil, ErrNotFound
@@ -207,5 +210,4 @@ func (p *pot[T]) dropEntry(e *entry[T]) {
 		p.tags.dropTagIfNoOtherEntriesExist(tag)
 	}
 	p.shards[e.shard].DropEntry(e.key)
-	e = nil
 }

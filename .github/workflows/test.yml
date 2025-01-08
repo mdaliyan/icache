@@ -9,7 +9,6 @@ on:
     branches:
       - master
       - v1
-      - test
 
 jobs:
   lint-and-test:

@@ -84,12 +84,11 @@ func TestDrop(t *testing.T) {
 	})
 
 	t.Run("multiple by tag", func(t *testing.T) {
-		// var i item
-		p := NewPot[item](WithTTL(time.Minute))
+		p := NewPot[item]()
 
 		p.Set("1", newItem("1"), "A")
 		p.Set("2", newItem("2"), "A", "B")
-		p.Set("3", newItem("6"), "B")
+		p.Set("3", newItem("3"), "B")
 		assertIsTrue(t, p.Exists("1"))
 		assertIsTrue(t, p.Exists("2"))
 
@@ -97,7 +96,37 @@ func TestDrop(t *testing.T) {
 		assertIsFalse(t, p.Exists("1"))
 		assertIsFalse(t, p.Exists("2"))
 		assertIsTrue(t, p.Exists("3"))
+
+		entriesWithTagA, err := p.GetByTag("A")
+		assertError(t, err)
+		assertEqual(t, 0, len(entriesWithTagA))
+
+		entriesWithTagB, err := p.GetByTag("B")
+		assertNoError(t, err)
+		assertEqual(t, 1, len(entriesWithTagB))
 	})
+}
+
+func TestGetByTags(t *testing.T) {
+	p := NewPot[item]()
+
+	p.Set("1", newItem("1"), "A")
+	p.Set("2", newItem("2"), "A", "B")
+	p.Set("3", newItem("3"), "A", "B")
+	assertIsTrue(t, p.Exists("1"))
+	assertIsTrue(t, p.Exists("2"))
+
+	entriesWithTagA, err := p.GetByTag("A")
+	assertNoError(t, err)
+	assertEqual(t, 3, len(entriesWithTagA))
+
+	entriesWithTagB, err := p.GetByTag("B")
+	assertNoError(t, err)
+	assertEqual(t, 2, len(entriesWithTagB))
+
+	entriesWithTagI, err := p.GetByTag("I")
+	assertError(t, err)
+	assertEqual(t, 0, len(entriesWithTagI))
 }
 
 func TestWithTTLOption(t *testing.T) {

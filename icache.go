@@ -37,7 +37,7 @@ type Pot[T any] interface {
 	// returns ErrNotFound if the key doesn't exist.
 	Get(key string) (v T, err error)
 
-	// Get restores ann T entries previously stored with the given tag
+	// GetByTag restores ann T entries previously stored with the given tag
 	// returns ErrNotFound if there is no entries to return.
 	GetByTag(tag string) ([]*entry[T], error)
 
