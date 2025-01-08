@@ -85,7 +85,7 @@ func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
 
 	e.rw.RLock()
 	defer e.rw.RUnlock()
-	ti := time.Unix(e.expiresAt, 0)
+	ti := time.UnixMilli(e.expiresAt)
 	return &ti, nil
 }
 
@@ -104,19 +104,12 @@ func (p *pot[T]) GetByTag(tag string) ([]T, error) {
 	defer p.windowRW.RUnlock()
 
 	entries := p.tags.getEntriesWithTags(tagKeyGen(tag)...)
-	result := make([]T, len(entries))
-	for i, e := range entries {
-		if e == nil {
-			continue
-		}
-		e.rw.RLock()
-		if !e.deleted {
-			result[i] = e.data
-		}
-		e.rw.RUnlock()
-	}
 	if len(entries) == 0 {
 		return nil, ErrNotFound
+	}
+	result := make([]T, len(entries))
+	for i, e := range entries {
+		result[i] = e.data
 	}
 	return result, nil
 }
@@ -209,7 +202,10 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 		e.rw.Unlock()
 	}
 	if expiredWindows > 0 {
-		p.window = append(entrySlice[T]{}, p.window[expiredWindows:]...)
+		remaining := len(p.window) - expiredWindows
+		newWindow := make(entrySlice[T], remaining)
+		copy(newWindow, p.window[expiredWindows:])
+		p.window = newWindow
 	}
 }
 

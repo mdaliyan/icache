@@ -55,6 +55,9 @@ func (t *tags[T]) getEntriesWithTags(tags ...uint64) entrySlice[T] {
 			continue
 		}
 		for _, e := range entries {
+			if e == nil {
+				continue
+			}
 			e.rw.RLock()
 			if !e.deleted {
 				results = append(results, e)
