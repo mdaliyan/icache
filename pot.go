@@ -58,16 +58,10 @@ func (p *pot[T]) Purge() {
 }
 
 func (p *pot[T]) Len() int {
-	p.windowRW.RLock()
-	defer p.windowRW.RUnlock()
-
 	return p.shards.EntriesLen()
 }
 
 func (p *pot[T]) Exists(key string) (ok bool) {
-	p.windowRW.RLock()
-	defer p.windowRW.RUnlock()
-
 	k, shard := keyGen(key)
 	exists := p.shards[shard].EntryExists(k)
 
@@ -75,9 +69,6 @@ func (p *pot[T]) Exists(key string) (ok bool) {
 }
 
 func (p *pot[T]) ExpireTime(key string) (t *time.Time, err error) {
-	p.windowRW.RLock()
-	defer p.windowRW.RUnlock()
-
 	e, ok := p.getEntry(key)
 	if !ok {
 		return nil, ErrNotFound
@@ -100,9 +91,6 @@ func (p *pot[T]) getEntry(key string) (*entry[T], bool) {
 }
 
 func (p *pot[T]) GetByTag(tag string) ([]T, error) {
-	p.windowRW.RLock()
-	defer p.windowRW.RUnlock()
-
 	entries := p.tags.getEntriesWithTags(tagKeyGen(tag)...)
 	if len(entries) == 0 {
 		return nil, ErrNotFound
@@ -115,9 +103,6 @@ func (p *pot[T]) GetByTag(tag string) ([]T, error) {
 }
 
 func (p *pot[T]) Get(key string) (v T, err error) {
-	p.windowRW.RLock()
-	defer p.windowRW.RUnlock()
-
 	e, ok := p.getEntry(key)
 	if !ok {
 		return v, ErrNotFound
@@ -135,9 +120,6 @@ func (p *pot[T]) Get(key string) (v T, err error) {
 
 func (p *pot[T]) Set(key string, v T, tags ...string) {
 	expireTime := time.Now().Add(p.ttl).UnixNano()
-	p.windowRW.Lock()
-	defer p.windowRW.Unlock()
-
 	k, shard := keyGen(key)
 	e, found := p.shards[shard].GetEntry(k)
 	if found {
@@ -153,7 +135,9 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 	}
 
 	if p.ttl > 0 {
+		p.windowRW.Lock()
 		p.window = append(p.window, e)
+		p.windowRW.Unlock()
 	}
 
 	p.tags.add(e)
@@ -161,8 +145,6 @@ func (p *pot[T]) Set(key string, v T, tags ...string) {
 }
 
 func (p *pot[T]) DropTags(tags ...string) {
-	p.windowRW.Lock()
-	defer p.windowRW.Unlock()
 	entriesToDrop := p.tags.getEntriesWithTags(tagKeyGen(tags...)...)
 	for _, e := range entriesToDrop {
 		p.dropEntry(e)
@@ -170,8 +152,6 @@ func (p *pot[T]) DropTags(tags ...string) {
 }
 
 func (p *pot[T]) Drop(keys ...string) {
-	p.windowRW.Lock()
-	defer p.windowRW.Unlock()
 	for _, key := range keys {
 		if e, ok := p.getEntry(key); ok {
 			p.dropEntry(e)
@@ -181,7 +161,6 @@ func (p *pot[T]) Drop(keys ...string) {
 
 func (p *pot[T]) dropExpiredEntries(at time.Time) {
 	now := at.UnixNano()
-
 	p.windowRW.Lock()
 	defer p.windowRW.Unlock()
 
