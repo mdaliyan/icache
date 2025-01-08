@@ -45,6 +45,7 @@ func (t *tags[T]) dropTagIfNoOtherEntriesExist(tag uint64) {
 }
 
 func (t *tags[T]) getEntriesWithTags(tags ...uint64) entrySlice[T] {
+
 	t.rw.RLock()
 	defer t.rw.RUnlock()
 
