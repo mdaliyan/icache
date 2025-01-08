@@ -183,7 +183,6 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 	defer p.windowRW.Unlock()
 
 	var expiredWindows int
-	var expiredEntries entrySlice[T]
 	for _, entry := range p.window {
 		if entry == nil {
 			expiredWindows++
@@ -195,15 +194,12 @@ func (p *pot[T]) dropExpiredEntries(at time.Time) {
 			break
 		}
 		entry.deleted = true
-		expiredEntries = append(expiredEntries, entry)
+		p.dropEntry(entry)
 		expiredWindows++
 		entry.rw.Unlock()
 	}
-	if len(expiredEntries) > 0 {
+	if expiredWindows > 0 {
 		p.window = append(entrySlice[T]{}, p.window[expiredWindows:]...)
-		for _, e := range expiredEntries {
-			p.dropEntry(e)
-		}
 	}
 }
 
