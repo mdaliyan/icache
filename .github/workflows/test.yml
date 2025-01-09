@@ -3,7 +3,7 @@ name: Build and Test
 on:
   push:
     branches:
-      # - master   # push on master is not possible anymore
+      - master   # push on master is not possible anymore
       - feature/*
   pull_request:
     branches:
