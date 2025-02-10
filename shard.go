@@ -38,8 +38,6 @@ func (s *shard[T]) EntryExists(key uint64) bool {
 	if !ok || e == nil {
 		return false
 	}
-	e.rw.RLock()
-	defer e.rw.RUnlock()
 	return !e.deleted
 }
 

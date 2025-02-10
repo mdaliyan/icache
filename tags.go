@@ -59,11 +59,9 @@ func (t *tags[T]) getEntriesWithTags(tags ...uint64) entrySlice[T] {
 			if e == nil {
 				continue
 			}
-			e.rw.RLock()
 			if !e.deleted {
 				results = append(results, e)
 			}
-			e.rw.RUnlock()
 		}
 	}
 	return results
